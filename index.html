@@ -24,6 +24,8 @@
   .leaflet-tile-pane{ filter: saturate(1.25) contrast(1.12) brightness(1.01); }
   .leaflet-control-attribution{ background:rgba(250,243,224,0.88) !important; font-family:'IBM Plex Mono', monospace; font-size:10px !important; color:var(--ink-soft) !important; }
   .leaflet-control-zoom a{ background:var(--parchment) !important; color:var(--ink) !important; border-color:var(--parchment-line) !important; }
+  .mile-tooltip{ background:var(--ink) !important; color:var(--parchment) !important; border:none !important; box-shadow:none !important; border-radius:10px; font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500; padding:1px 6px; }
+  .mile-tooltip::before{ display:none; }
 
   #header{ position:absolute; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:space-between; padding:18px 22px; pointer-events:none; }
   #brand{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
@@ -42,7 +44,19 @@
   #sidebar-head h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 10px; color:var(--parchment); display:flex; align-items:center; justify-content:space-between; }
   #sidebar-chevron{ display:none; font-size:12px; opacity:0.6; transition:transform 0.2s ease; }
   #sidebar-handle{ display:none; }
+  #search-input{
+    width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px;
+    background:rgba(250,243,224,0.08); border:1px solid rgba(250,243,224,0.22); border-radius:8px;
+    padding:7px 10px; color:var(--parchment); margin-bottom:8px;
+  }
+  #search-input::placeholder{ color:var(--parchment-dim); opacity:0.6; }
+  #search-input:focus{ outline:none; border-color:rgba(250,243,224,0.5); }
+  #sort-row{ display:flex; gap:6px; margin-bottom:10px; }
+  #sort-row .btn{ font-size:11px; padding:5px 10px; color:var(--parchment-dim); border-color:rgba(250,243,224,0.25); }
+  #sort-row .btn.active{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
   #filters{ display:flex; flex-wrap:wrap; gap:6px; }
+  #group-filters{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(250,243,224,0.1); }
+  #creator-filters{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(250,243,224,0.1); }
   .chip{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:4px 9px; border-radius:20px; border:1px solid rgba(250,243,224,0.3); color:var(--parchment-dim); cursor:pointer; display:flex; align-items:center; gap:5px; user-select:none; }
   .chip .dot{ width:7px; height:7px; border-radius:50%; }
   .chip.off{ opacity:0.35; }
@@ -55,12 +69,23 @@
   #empty-list{ padding:18px 12px; font-size:12.5px; color:var(--parchment-dim); opacity:0.75; line-height:1.5; }
 
   #hint{ position:absolute; left:50%; top:26px; transform:translateX(-50%); z-index:800; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:14.5px; color:var(--ink); background:var(--parchment); border:1px solid var(--parchment-line); padding:9px 18px; border-radius:24px; box-shadow:0 6px 18px rgba(0,0,0,0.3); pointer-events:none; transition:opacity 0.4s ease; }
+  #offline-banner{
+    position:absolute; top:0; left:0; right:0; z-index:1600; display:none;
+    background:var(--history); color:#fff; text-align:center; font-family:'IBM Plex Sans', sans-serif;
+    font-size:13px; font-weight:500; padding:8px 16px;
+  }
+  #offline-banner.show{ display:block; }
 
-  .cairn-icon{ overflow:visible; }
+  .cairn-icon{ overflow:visible; position:relative; }
+  .weather-badge{ position:absolute; top:-2px; right:0px; width:11px; height:11px; border-radius:50%; border:2px solid var(--parchment); box-shadow:0 1px 2px rgba(0,0,0,0.4); }
+  .weather-good{ background:#2f7d32; }
+  .weather-ok{ background:#c9982a; }
+  .weather-poor{ background:#b23a3a; }
   .cairn-icon svg{ display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
   .cairn-icon.dimmed{ opacity:0.15; }
 
   #drawer{ position:absolute; top:0; right:0; bottom:0; z-index:1100; width:380px; background:var(--parchment); color:var(--ink); box-shadow:-8px 0 24px rgba(0,0,0,0.4); transform:translateX(100%); transition:transform 0.28s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; }
+  #drawer-handle{ display:none; }
   #drawer.open{ transform:translateX(0); }
   #drawer-inner{ padding:24px 24px 20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; }
   #drawer-close{ align-self:flex-end; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65; }
@@ -76,11 +101,23 @@
   #f-coords:focus{ outline:none; border-color:var(--ink-soft); }
   #f-coords.invalid{ border-color:var(--history); }
   #coord-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft); opacity:0.55; margin-top:5px; }
+  #f-group{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
+  #f-group:focus{ outline:none; border-color:var(--ink-soft); }
   #f-notes{ font-family:'IBM Plex Sans', sans-serif; font-size:14px; line-height:1.6; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.45); border-radius:8px; padding:10px 12px; resize:vertical; min-height:120px; color:var(--ink); width:100%; }
   #f-notes:focus{ outline:none; border-color:var(--ink-soft); }
   input:disabled, textarea:disabled{ opacity:0.7; cursor:default; }
   #gpx-box{ border:1px dashed var(--parchment-line); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   #gpx-status{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); flex:1; }
+  #elevation-chart{ border:1px solid var(--parchment-line); border-radius:8px; overflow:hidden; background:rgba(255,255,255,0.35); }
+  .elev-loading{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); padding:10px; text-align:center; }
+  #elevation-stats{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ink-soft); opacity:0.75; margin-top:5px; }
+  #tide-controls{ margin-bottom:6px; }
+  #tide-info{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink); line-height:1.7; }
+  .weather-day{ display:flex; align-items:center; gap:8px; padding:3px 0; font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink); }
+  .weather-dot{ width:9px; height:9px; border-radius:50%; flex-shrink:0; }
+  .w-dow{ width:32px; font-weight:500; }
+  .w-detail{ color:var(--ink-soft); }
+  #weather-criteria-note{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft); opacity:0.65; margin-top:6px; line-height:1.4; }
   #drawer-actions{ display:flex; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid var(--parchment-line); }
   .btn{ font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:500; padding:9px 16px; border-radius:8px; cursor:pointer; border:1px solid var(--parchment-line); background:transparent; color:var(--ink); }
   .btn:hover{ background:rgba(15,30,28,0.08); }
@@ -92,6 +129,22 @@
   #save-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.55; margin-top:10px; text-align:center; height:14px; }
 
   #photo-panel{ position:absolute; top:66px; right:16px; z-index:900; width:300px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; }
+  #weather-panel{ position:absolute; top:66px; right:16px; z-index:900; width:280px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; color:var(--parchment); }
+  #weather-panel.open{ display:block; }
+  #weather-panel h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 12px; color:var(--parchment); }
+  #weather-panel .field-label{ color:var(--parchment-dim); opacity:0.75; }
+  #weather-category-select{
+    width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px;
+    background:rgba(250,243,224,0.08); border:1px solid rgba(250,243,224,0.25); border-radius:8px;
+    padding:8px 10px; color:var(--parchment); margin-bottom:10px;
+  }
+  #weather-panel-status{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); opacity:0.85; margin-bottom:10px; }
+  #weather-panel .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); width:100%; }
+  #weather-panel .btn.primary{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
+  #weather-legend{ display:flex; gap:12px; margin-top:12px; font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); }
+  #weather-legend span{ display:flex; align-items:center; gap:5px; }
+  .wdot{ display:inline-block; width:9px; height:9px; border-radius:50%; }
+  #weather-panel-note{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--parchment-dim); opacity:0.6; margin-top:10px; line-height:1.4; }
   #photo-panel.open{ display:block; }
   #photo-panel h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 12px; color:var(--parchment); }
   #photo-panel .field-label{ color:var(--parchment-dim); opacity:0.75; }
@@ -128,6 +181,10 @@
   #photo-viewer-img, #attachment-viewer-img{ width:100%; border-radius:8px; display:block; margin-bottom:12px; }
   #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:14px; }
   #photo-link-select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
+  #photo-location-set{ display:none; margin-bottom:14px; }
+  #photo-location-input{ width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); margin-bottom:6px; }
+  #photo-location-input:focus{ outline:none; border-color:var(--ink-soft); }
+  #photo-location-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.65; margin-bottom:8px; line-height:1.4; }
   #photo-viewer-actions, #attachment-viewer-actions{ display:flex; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--parchment-line); justify-content:flex-end; }
   #linked-photos{ display:flex; gap:8px; flex-wrap:wrap; }
   #linked-photos img{ width:52px; height:52px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
@@ -144,6 +201,32 @@
   #attachments-grid{ display:flex; flex-wrap:wrap; gap:8px; }
   .attachment-thumb{ position:relative; width:64px; height:64px; }
   .attachment-thumb img{ width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
+  .video-thumb{ width:64px; height:64px; border-radius:8px; background:var(--ink); color:var(--parchment); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; border:1px solid var(--parchment-line); }
+
+  #gallery-screen{
+    position:absolute; inset:0; z-index:1250; background:var(--ink); color:var(--parchment);
+    display:none; flex-direction:column; padding:22px;
+  }
+  #gallery-screen.open{ display:flex; }
+  #gallery-header{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; flex-shrink:0; }
+  #gallery-header h2{ font-family:'Fraunces', serif; font-weight:500; font-style:italic; font-size:22px; margin:0; }
+  #gallery-count{ font-family:'IBM Plex Mono', monospace; font-size:13px; color:var(--parchment-dim); opacity:0.8; font-style:normal; }
+  #gallery-filters{ display:flex; gap:8px; margin-bottom:16px; flex-shrink:0; }
+  #gallery-filters .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
+  #gallery-filters .btn.active{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
+  #gallery-grid{
+    flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; padding-bottom:20px;
+  }
+  .gallery-tile{ position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio:1; background:var(--ink-soft); }
+  .gallery-tile img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .gallery-tile .video-thumb{ width:100%; height:100%; border-radius:0; font-size:28px; }
+  .gallery-tile .tile-caption{
+    position:absolute; left:0; right:0; bottom:0; padding:6px 8px;
+    background:linear-gradient(transparent, rgba(0,0,0,0.75));
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment);
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  #gallery-empty{ color:var(--parchment-dim); opacity:0.7; font-size:13px; padding:20px 0; }
   .attachment-thumb button{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--history); color:#fff; border:1.5px solid var(--parchment); font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
   #save-first-note{ font-size:12.5px; color:var(--ink-soft); opacity:0.7; font-style:italic; }
 
@@ -151,6 +234,12 @@
   body.is-owner .owner-only{ display:initial; }
   body.is-owner button.owner-only, body.is-owner .pill-btn.owner-only{ display:inline-flex; }
   body.is-owner div.owner-only, body.is-owner #checklist-add.owner-only{ display:flex; }
+  .editor-only{ display:none; }
+  body.can-edit-trip .editor-only{ display:initial; }
+  body.can-edit-trip button.editor-only{ display:inline-flex; }
+  body.can-edit-trip div.editor-only, body.can-edit-trip #checklist-add.editor-only{ display:flex; }
+  #not-your-pin-note{ display:none; font-size:12.5px; color:var(--ink-soft); opacity:0.75; font-style:italic; margin-top:6px; }
+  body.is-owner:not(.can-edit-trip) #not-your-pin-note.showable{ display:block; }
 
   @media (max-width: 700px){
     input, textarea, select{ font-size:16px !important; }
@@ -168,11 +257,15 @@
     #sidebar-chevron{ display:inline-block; }
     #sidebar.hidden #sidebar-chevron{ transform:rotate(180deg); }
     #photo-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
+    #weather-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #drawer{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:88vh; border-radius:16px 16px 0 0; transform:translateY(100%); }
+    #drawer.peek{ transform:translateY(calc(100% - 68px)); }
+    #drawer-handle{ display:block; width:36px; height:4px; border-radius:2px; background:rgba(15,30,28,0.25); margin:10px auto 4px; cursor:pointer; flex-shrink:0; }
+    #drawer.peek #drawer-inner{ overflow:hidden; }
     #drawer.open{ transform:translateY(0); }
     #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
     .checklist-item input[type=checkbox]{ width:20px; height:20px; }
-    .attachment-thumb, .attachment-thumb img{ width:72px; height:72px; }
+    .attachment-thumb, .attachment-thumb img, .video-thumb{ width:72px; height:72px; }
     .unlocated-row img{ width:38px; height:38px; }
   }
 </style>
@@ -180,6 +273,8 @@
 <body>
 <div id="app">
   <div id="map"></div>
+
+  <div id="offline-banner">You're offline — showing the last loaded map and data. Editing is paused until you're back online.</div>
 
   <div id="header">
     <div id="brand">
@@ -193,9 +288,12 @@
     </div>
     <div id="header-right">
       <button class="pill-btn" id="btn-signin">Sign in</button>
+      <button class="pill-btn" id="btn-gallery">Gallery</button>
       <button class="pill-btn" id="btn-photos">Photos</button>
       <button class="pill-btn" id="toggle-all-routes">All routes</button>
       <button class="pill-btn" id="toggle-seamarks">Sea marks</button>
+      <button class="pill-btn" id="toggle-bathymetry">Depths</button>
+      <button class="pill-btn" id="toggle-weather">Weather</button>
       <button class="pill-btn" id="toggle-sidebar">List</button>
       <button class="pill-btn" id="btn-export">Export backup</button>
       <button class="pill-btn owner-only" id="btn-import">Import backup</button>
@@ -205,6 +303,26 @@
   </div>
 
   <div id="hint">Loading the shared map…</div>
+
+  <div id="weather-panel">
+    <h2>Weather suitability</h2>
+    <div class="field-label">Rate the map for</div>
+    <select id="weather-category-select">
+      <option value="hike">Hike</option>
+      <option value="wild">Wild & remote</option>
+      <option value="history">History & ruins</option>
+      <option value="town">Town & city</option>
+      <option value="food">Food & drink</option>
+    </select>
+    <div id="weather-panel-status">Not loaded yet.</div>
+    <button class="btn small primary" id="btn-load-weather-grid">Scan the map</button>
+    <div id="weather-legend">
+      <span><i class="wdot weather-good"></i> Good</span>
+      <span><i class="wdot weather-ok"></i> Marginal</span>
+      <span><i class="wdot weather-poor"></i> Poor</span>
+    </div>
+    <div id="weather-panel-note">Best rating across the coming weekend, from Open-Meteo forecast data.</div>
+  </div>
 
   <div id="photo-panel">
     <h2>Photos from Google Drive</h2>
@@ -233,7 +351,14 @@
   <div id="photo-viewer">
     <div id="photo-viewer-inner">
       <img id="photo-viewer-img">
+      <video id="photo-viewer-video" controls style="display:none; width:100%; border-radius:8px; margin-bottom:12px;"></video>
       <div id="photo-viewer-name"></div>
+      <div id="photo-location-set">
+        <div class="field-label">Location</div>
+        <input id="photo-location-input" type="text" placeholder="55.699391, -4.904652">
+        <div id="photo-location-hint"></div>
+        <button class="btn small" id="btn-photo-set-location">Set location</button>
+      </div>
       <div class="field-label owner-only">Link to waypoint</div>
       <select class="owner-only" id="photo-link-select"></select>
       <div id="photo-viewer-actions">
@@ -246,23 +371,46 @@
   <div id="attachment-viewer">
     <div id="attachment-viewer-inner">
       <img id="attachment-viewer-img">
+      <video id="attachment-viewer-video" controls style="display:none; width:100%; border-radius:8px; margin-bottom:12px;"></video>
       <div id="attachment-viewer-actions">
         <button class="btn" id="attachment-viewer-close">Close</button>
-        <button class="btn danger owner-only" id="attachment-remove">Remove</button>
+        <button class="btn danger editor-only" id="attachment-remove">Remove</button>
       </div>
     </div>
+  </div>
+
+  <div id="gallery-screen">
+    <div id="gallery-header">
+      <h2>Gallery <span id="gallery-count"></span></h2>
+      <button class="pill-btn" id="btn-gallery-close">Back to map</button>
+    </div>
+    <div id="gallery-filters">
+      <button class="btn small active" data-gfilter="all">All</button>
+      <button class="btn small" data-gfilter="location">Location photos</button>
+      <button class="btn small" data-gfilter="notes">Notes & scans</button>
+    </div>
+    <div id="gallery-grid"></div>
   </div>
 
   <div id="sidebar">
     <div id="sidebar-head">
       <div id="sidebar-handle"></div>
       <h2>Your waypoints <span id="sidebar-chevron">▾</span></h2>
+      <input id="search-input" type="text" placeholder="Search waypoints…">
+      <div id="sort-row">
+        <button class="btn small active" data-sort="newest">Newest</button>
+        <button class="btn small" data-sort="alpha">A–Z</button>
+        <button class="btn small" data-sort="nearest">Nearest</button>
+      </div>
       <div id="filters"></div>
+      <div id="group-filters"></div>
+      <div id="creator-filters"></div>
     </div>
     <div id="trip-list"></div>
   </div>
 
   <div id="drawer">
+    <div id="drawer-handle"></div>
     <div id="drawer-inner">
       <button id="drawer-close">✕ close</button>
       <div class="field-label">Title</div>
@@ -272,36 +420,50 @@
       <div class="field-label">Coordinates</div>
       <input id="f-coords" type="text" placeholder="55.699391, -4.904652">
       <div id="coord-sub">Paste straight from Google Maps: latitude, longitude</div>
+      <div class="field-label">Trip / group (optional)</div>
+      <input id="f-group" type="text" list="group-suggestions" placeholder="e.g. Skye 2027">
+      <datalist id="group-suggestions"></datalist>
       <div class="field-label">Notes</div>
       <textarea id="f-notes" placeholder="What's the plan? Route ideas, best season, who to bring, where to stay…"></textarea>
-      <div class="field-label owner-only">GPX route</div>
+      <div class="field-label editor-only">GPX route</div>
       <div id="gpx-box">
         <input type="file" id="gpx-file" accept=".gpx" style="display:none">
-        <button class="btn small owner-only" id="btn-gpx-upload">Upload GPX</button>
-        <button class="btn small owner-only" id="btn-gpx-remove" style="display:none">Remove route</button>
+        <button class="btn small editor-only" id="btn-gpx-upload">Upload GPX</button>
+        <button class="btn small editor-only" id="btn-gpx-remove" style="display:none">Remove route</button>
         <span id="gpx-status">No route attached</span>
       </div>
+      <div class="field-label" id="elevation-label" style="display:none">Elevation profile</div>
+      <div id="elevation-chart"></div>
+      <div id="elevation-stats"></div>
+      <div class="field-label">Tides</div>
+      <div id="tide-controls">
+        <button class="btn small" id="btn-check-tides">Check tide times</button>
+      </div>
+      <div id="tide-info"></div>
+      <div class="field-label">Weather this week</div>
+      <div id="weather-detail"></div>
       <div class="field-label" id="linked-photos-label" style="display:none">Linked photos</div>
       <div id="linked-photos"></div>
       <div id="richer-content" style="display:none">
         <div class="field-label">Checklist</div>
         <div id="checklist-list"></div>
-        <div id="checklist-add" class="owner-only">
+        <div id="checklist-add" class="editor-only">
           <input id="checklist-input" type="text" placeholder="Add an item and press Enter">
           <button class="btn small" id="btn-checklist-add">Add</button>
         </div>
         <div class="field-label">Photos & scanned pages</div>
         <div id="attachments-grid"></div>
-        <div id="attachments-add" class="owner-only">
-          <input type="file" id="attachment-file" accept="image/*" multiple style="display:none">
+        <div id="attachments-add" class="editor-only">
+          <input type="file" id="attachment-file" accept="image/*,video/*" multiple style="display:none">
           <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
         </div>
       </div>
       <div id="save-first-note" style="display:none">Save this waypoint to add a checklist or photos.</div>
+      <div id="not-your-pin-note" class="showable">Added by someone else — only they can edit this one.</div>
       <div id="drawer-actions">
-        <button class="btn danger owner-only" id="btn-delete">Delete</button>
+        <button class="btn danger editor-only" id="btn-delete">Delete</button>
         <button class="btn" id="btn-cancel">Close</button>
-        <button class="btn primary owner-only" id="btn-save">Save</button>
+        <button class="btn primary editor-only" id="btn-save">Save</button>
       </div>
       <div id="save-hint"></div>
     </div>
@@ -335,6 +497,10 @@ let photos = [];
 let markers = {};
 let photoMarkers = {};
 let activeFilters = new Set(Object.keys(CATEGORIES));
+let knownGroups = new Set();
+let activeGroups = new Set();
+let knownCreators = new Set();
+let activeCreators = new Set();
 let currentId = null;
 let pendingId = null;
 let isNewPin = false;
@@ -355,6 +521,14 @@ function escapeHtml(s){
   const d = document.createElement('div');
   d.textContent = s;
   return d.innerHTML;
+}
+
+function formatPhotoDate(ts, hasTime){
+  if(!ts) return 'Unknown date';
+  const d = new Date(ts);
+  return hasTime
+    ? d.toLocaleString([], { day:'numeric', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' })
+    : d.toLocaleDateString([], { day:'numeric', month:'short', year:'numeric' });
 }
 
 function publicFileUrl(fileId){
@@ -385,7 +559,7 @@ function requestDriveToken(){
 }
 
 async function driveListFolder(folderId, token){
-  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and mimeType contains 'image/'`);
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and (mimeType contains 'image/' or mimeType contains 'video/')`);
   const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=200`;
   const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
   if(!res.ok) throw new Error('list failed ' + res.status);
@@ -535,18 +709,39 @@ async function doCloudSave(){
 
 /* ---------- Owner sign-in ---------- */
 
+let editorName = localStorage.getItem('cairn:editorName') || '';
+
 function applyOwnerUI(){
   document.body.classList.toggle('is-owner', isOwner);
-  document.getElementById('btn-signin').textContent = isOwner ? 'Signed in ✓' : 'Sign in';
+  document.getElementById('btn-signin').textContent = isOwner ? (editorName || 'Signed in ✓') : 'Sign in';
   document.getElementById('btn-signin').classList.toggle('owner', isOwner);
 }
 
+function ensureEditorName(){
+  if(editorName) return;
+  const name = prompt("What's your name? This tags waypoints you add so they can be filtered by who added them.", '');
+  if(name && name.trim()){
+    editorName = name.trim();
+    localStorage.setItem('cairn:editorName', editorName);
+  }
+}
+
 document.getElementById('btn-signin').onclick = async ()=>{
-  if(isOwner) return;
+  if(isOwner){
+    const name = prompt('Change your display name:', editorName || '');
+    if(name && name.trim()){
+      editorName = name.trim();
+      localStorage.setItem('cairn:editorName', editorName);
+      applyOwnerUI();
+    }
+    return;
+  }
   try{
     await requestDriveToken();
     isOwner = true;
+    ensureEditorName();
     applyOwnerUI();
+    applyFilters();
     if(!DATA_FILE_ID){
       if(confirm('No shared storage found yet. Set it up now?')) await bootstrapSharedStorage();
     }
@@ -592,6 +787,254 @@ document.getElementById('toggle-seamarks').onclick = (e)=>{
   else{ map.removeLayer(seamarksLayer); e.target.classList.remove('active'); }
 };
 
+const bathymetryLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
+  layers: 'emodnet:mean_multicolour',
+  format: 'image/png',
+  transparent: true,
+  version: '1.1.1',
+  opacity: 0.6,
+  attribution: 'Bathymetry © EMODnet — for planning only, not for navigation',
+});
+let bathymetryOn = false;
+document.getElementById('toggle-bathymetry').onclick = (e)=>{
+  bathymetryOn = !bathymetryOn;
+  if(bathymetryOn){ bathymetryLayer.addTo(map); e.target.classList.add('active'); }
+  else{ map.removeLayer(bathymetryLayer); e.target.classList.remove('active'); }
+};
+
+const WEATHER_GRID_COLS = 12;
+const WEATHER_GRID_ROWS = 9;
+let weatherGridPoints = [];
+let weatherGridRaw = null;
+const weatherGridLayer = L.layerGroup();
+let weatherPanelOn = false;
+
+function buildWeatherGrid(){
+  const sw = UK_IRELAND_BOUNDS.getSouthWest();
+  const ne = UK_IRELAND_BOUNDS.getNorthEast();
+  const points = [];
+  for(let r=0;r<WEATHER_GRID_ROWS;r++){
+    for(let c=0;c<WEATHER_GRID_COLS;c++){
+      points.push({
+        lat: sw.lat + (ne.lat-sw.lat) * (r+0.5)/WEATHER_GRID_ROWS,
+        lng: sw.lng + (ne.lng-sw.lng) * (c+0.5)/WEATHER_GRID_COLS,
+      });
+    }
+  }
+  return points;
+}
+
+function renderWeatherGrid(){
+  weatherGridLayer.clearLayers();
+  if(!weatherGridRaw) return;
+  const cat = document.getElementById('weather-category-select').value;
+  weatherGridPoints.forEach((pt,i)=>{
+    const days = weatherGridRaw[i];
+    if(!days || days.length===0) return;
+    const weekendDays = days.filter(d=>isWeekendDate(d.date));
+    const pool = weekendDays.length ? weekendDays : days;
+    let best = 'poor';
+    pool.forEach(d=>{ const r = rateDay(d, cat); if(RATING_RANK[r] > RATING_RANK[best]) best = r; });
+    const color = best==='good' ? '#2f7d32' : best==='ok' ? '#c9982a' : '#b23a3a';
+    L.circleMarker([pt.lat, pt.lng], { radius:9, color:'#fff', weight:1, fillColor:color, fillOpacity:0.75 })
+      .addTo(weatherGridLayer);
+  });
+}
+
+async function loadWeatherGrid(){
+  const status = document.getElementById('weather-panel-status');
+  const btn = document.getElementById('btn-load-weather-grid');
+  status.textContent = 'Fetching forecasts across the map…';
+  btn.disabled = true;
+  try{
+    weatherGridPoints = buildWeatherGrid();
+    weatherGridRaw = await fetchDailyWeather(weatherGridPoints);
+    status.textContent = `Loaded ${weatherGridPoints.length} points across the map · updated just now.`;
+    renderWeatherGrid();
+    if(weatherPanelOn) weatherGridLayer.addTo(map);
+  }catch(e){
+    status.textContent = "Couldn't load weather data. Try again.";
+  }
+  btn.disabled = false;
+}
+
+document.getElementById('toggle-weather').onclick = (e)=>{
+  weatherPanelOn = !weatherPanelOn;
+  document.getElementById('weather-panel').classList.toggle('open', weatherPanelOn);
+  e.target.classList.toggle('active', weatherPanelOn);
+  if(weatherPanelOn && weatherGridRaw) weatherGridLayer.addTo(map);
+  else map.removeLayer(weatherGridLayer);
+};
+document.getElementById('btn-load-weather-grid').onclick = loadWeatherGrid;
+document.getElementById('weather-category-select').onchange = ()=>{
+  if(weatherGridRaw) renderWeatherGrid();
+};
+
+/* ---------- Tides ---------- */
+
+const ADMIRALTY_API_KEY = '9d8d041c47ff431c92994c7f0cb1cb3e';
+const ADMIRALTY_BASE = 'https://admiraltyapi.azure-api.net/uktidalapi/api/V1';
+
+let tideStations = null;
+async function ensureTideStations(){
+  if(tideStations) return tideStations;
+  const cached = localStorage.getItem('cairn:tideStations');
+  if(cached){ try{ tideStations = JSON.parse(cached); return tideStations; }catch(e){} }
+  const res = await fetch(`${ADMIRALTY_BASE}/Stations`, { headers: { 'Ocp-Apim-Subscription-Key': ADMIRALTY_API_KEY } });
+  if(!res.ok) throw new Error('station list failed: ' + res.status);
+  const data = await res.json();
+  const raw = data.features || data.Stations || data || [];
+  const list = raw.map(f=>{
+    const props = f.properties || f;
+    const geo = f.geometry && f.geometry.coordinates;
+    return {
+      id: props.Id || props.id || props.StationId,
+      name: props.Name || props.name,
+      lat: geo ? geo[1] : (props.Latitude ?? props.lat),
+      lng: geo ? geo[0] : (props.Longitude ?? props.lng),
+    };
+  }).filter(s=> s.id && Number.isFinite(s.lat) && Number.isFinite(s.lng));
+  tideStations = list;
+  if(list.length) localStorage.setItem('cairn:tideStations', JSON.stringify(list));
+  return list;
+}
+function findNearestStation(stations, lat, lng){
+  let best = null, bestDist = Infinity;
+  stations.forEach(s=>{
+    const d = haversineMiles(lat,lng,s.lat,s.lng);
+    if(d < bestDist){ bestDist = d; best = s; }
+  });
+  return best ? { ...best, distanceMiles: bestDist } : null;
+}
+async function fetchTideEvents(stationId){
+  const res = await fetch(`${ADMIRALTY_BASE}/Stations/${stationId}/TidalEvents`, { headers: { 'Ocp-Apim-Subscription-Key': ADMIRALTY_API_KEY } });
+  if(!res.ok) throw new Error('tide events failed: ' + res.status);
+  return await res.json();
+}
+async function showTidesForTrip(trip){
+  const box = document.getElementById('tide-info');
+  if(!ADMIRALTY_API_KEY){
+    box.textContent = 'Tide lookup needs an Admiralty API key set up first.';
+    return;
+  }
+  box.textContent = 'Finding nearest tide station…';
+  try{
+    const stations = await ensureTideStations();
+    const nearest = findNearestStation(stations, trip.lat, trip.lng);
+    if(!nearest){ box.textContent = 'No tide station found.'; return; }
+    box.textContent = `${nearest.name} (${nearest.distanceMiles.toFixed(1)} mi away) · loading tide times…`;
+    const events = await fetchTideEvents(nearest.id);
+    const raw = Array.isArray(events) ? events : (events.events || events.TidalEvents || []);
+    const now = Date.now();
+    const upcoming = raw.map(e=>({
+      isHigh: (e.EventType || e.type || '').toLowerCase().includes('high'),
+      time: new Date(e.DateTime || e.time || e.Date).getTime(),
+      height: e.Height ?? e.height,
+    })).filter(e=> Number.isFinite(e.time) && e.time > now)
+      .sort((a,b)=>a.time-b.time)
+      .slice(0,4);
+    if(upcoming.length === 0){ box.textContent = `${nearest.name} · no upcoming tide data returned.`; return; }
+    box.innerHTML = `<strong>${escapeHtml(nearest.name)}</strong> (${nearest.distanceMiles.toFixed(1)} mi away)<br>` +
+      upcoming.map(e=>
+        `${e.isHigh ? 'High' : 'Low'} water · ${new Date(e.time).toLocaleString([], { weekday:'short', hour:'2-digit', minute:'2-digit' })}${Number.isFinite(e.height) ? ' · ' + e.height.toFixed(1) + 'm' : ''}`
+      ).join('<br>');
+  }catch(e){
+    box.textContent = "Couldn't load tide times — check the API key and try again.";
+  }
+}
+document.getElementById('btn-check-tides').onclick = ()=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  if(t) showTidesForTrip(t);
+};
+
+/* ---------- Weather suitability ---------- */
+
+// Thresholds are in km/h (wind gust) and mm (daily rain total).
+const WEATHER_CRITERIA = {
+  hike:    { goodWind:48, okWind:72, goodRain:2,  okRain:6,  label:'Hike' },
+  wild:    { goodWind:32, okWind:48, goodRain:1,  okRain:4,  label:'Wild & remote' },
+  history: { goodWind:72, okWind:97, goodRain:8,  okRain:15, label:'History & ruins' },
+  town:    { goodWind:72, okWind:97, goodRain:10, okRain:20, label:'Town & city' },
+  food:    { goodWind:80, okWind:105,goodRain:12, okRain:25, label:'Food & drink' },
+};
+
+function rateDay(day, cat){
+  const c = WEATHER_CRITERIA[cat] || WEATHER_CRITERIA.town;
+  if(day.windGust <= c.goodWind && day.rain <= c.goodRain) return 'good';
+  if(day.windGust <= c.okWind && day.rain <= c.okRain) return 'ok';
+  return 'poor';
+}
+function isWeekendDate(dateStr){
+  const dow = new Date(dateStr + 'T12:00:00').getDay();
+  return dow === 0 || dow === 6;
+}
+const RATING_RANK = { good:2, ok:1, poor:0 };
+
+let weatherByTrip = {};
+
+function weekendRatingFor(tripId){
+  const days = weatherByTrip[tripId];
+  if(!days) return null;
+  const trip = trips.find(t=>t.id===tripId);
+  if(!trip) return null;
+  const weekendDays = days.filter(d=>isWeekendDate(d.date));
+  const pool = weekendDays.length ? weekendDays : days;
+  let best = 'poor';
+  pool.forEach(d=>{
+    const r = rateDay(d, trip.category);
+    if(RATING_RANK[r] > RATING_RANK[best]) best = r;
+  });
+  return best;
+}
+
+async function fetchDailyWeather(points){
+  if(points.length === 0) return [];
+  const lats = points.map(p=>p.lat.toFixed(4)).join(',');
+  const lngs = points.map(p=>p.lng.toFixed(4)).join(',');
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&daily=precipitation_sum,windgusts_10m_max&timezone=auto&forecast_days=7`;
+  const res = await fetch(url);
+  if(!res.ok) throw new Error('weather fetch failed: ' + res.status);
+  const data = await res.json();
+  const results = Array.isArray(data) ? data : [data];
+  return points.map((p,i)=>{
+    const d = results[i];
+    if(!d || !d.daily || !d.daily.time) return [];
+    return d.daily.time.map((date,idx)=>({
+      date,
+      rain: d.daily.precipitation_sum ? d.daily.precipitation_sum[idx] : 0,
+      windGust: d.daily.windgusts_10m_max ? d.daily.windgusts_10m_max[idx] : 0,
+    }));
+  });
+}
+
+async function refreshWaypointWeather(){
+  if(trips.length === 0) return;
+  try{
+    const days = await fetchDailyWeather(trips.map(t=>({ lat:t.lat, lng:t.lng })));
+    weatherByTrip = {};
+    trips.forEach((t,i)=>{ weatherByTrip[t.id] = days[i]; });
+    applyFilters();
+    if(currentId) renderWeatherDetail(trips.find(t=>t.id===currentId));
+  }catch(e){}
+}
+
+function renderWeatherDetail(trip){
+  const box = document.getElementById('weather-detail');
+  if(!box || !trip) return;
+  const days = weatherByTrip[trip.id];
+  if(!days || days.length === 0){ box.textContent = 'Weather not loaded yet.'; return; }
+  const c = WEATHER_CRITERIA[trip.category] || WEATHER_CRITERIA.town;
+  box.innerHTML = days.map(d=>{
+    const r = rateDay(d, trip.category);
+    const dow = new Date(d.date + 'T12:00:00').toLocaleDateString([], { weekday:'short' });
+    return `<div class="weather-day">
+      <span class="weather-dot weather-${r}"></span>
+      <span class="w-dow">${dow}</span>
+      <span class="w-detail">${Math.round(d.windGust)} km/h gust · ${d.rain.toFixed(1)}mm rain</span>
+    </div>`;
+  }).join('') + `<div id="weather-criteria-note">Rated for ${escapeHtml(c.label)} — good ≤ ${c.goodWind}km/h wind & ${c.goodRain}mm rain, ok ≤ ${c.okWind}km/h & ${c.okRain}mm.</div>`;
+}
+
 /* ---------- Waypoint markers ---------- */
 
 function cairnSvg(color, dimmed){
@@ -602,9 +1045,10 @@ function cairnSvg(color, dimmed){
     <ellipse cx="15" cy="8.2" rx="3.6" ry="2" fill="${color}"/>
   </svg>`;
 }
-function makeIcon(cat, dimmed){
+function makeIcon(cat, dimmed, weatherRating){
   const c = CATEGORIES[cat] ? CATEGORIES[cat].color : '#0d5f7a';
-  return L.divIcon({ className:'cairn-icon', html: cairnSvg(c, dimmed), iconSize:[30,34], iconAnchor:[15,32] });
+  const badge = (weatherRating && !dimmed) ? `<div class="weather-badge weather-${weatherRating}"></div>` : '';
+  return L.divIcon({ className:'cairn-icon', html: cairnSvg(c, dimmed) + badge, iconSize:[30,34], iconAnchor:[15,32] });
 }
 
 function cameraSvg(){
@@ -657,26 +1101,138 @@ function selectCategory(key){
   document.querySelectorAll('.cat-opt').forEach(o=> o.classList.toggle('active', o.dataset.key===key));
   document.getElementById('cat-select').dataset.selected = key;
 }
+function tripGroupKey(t){ return (t.group && t.group.trim()) ? t.group.trim() : '__ungrouped__'; }
+
+function buildGroupFilters(){
+  const groups = new Set();
+  let hasUngrouped = false;
+  trips.forEach(t=>{
+    const key = tripGroupKey(t);
+    if(key === '__ungrouped__') hasUngrouped = true; else groups.add(key);
+  });
+  groups.forEach(g=>{ if(!knownGroups.has(g)){ knownGroups.add(g); activeGroups.add(g); } });
+  if(hasUngrouped && !knownGroups.has('__ungrouped__')){ knownGroups.add('__ungrouped__'); activeGroups.add('__ungrouped__'); }
+
+  const el = document.getElementById('group-filters');
+  el.innerHTML = '';
+  if(groups.size === 0 && !hasUngrouped) return;
+  Array.from(groups).sort().forEach(g=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeGroups.has(g) ? '' : ' off');
+    chip.textContent = g;
+    chip.onclick = ()=>{
+      if(activeGroups.has(g)) activeGroups.delete(g); else activeGroups.add(g);
+      chip.classList.toggle('off', !activeGroups.has(g));
+      applyFilters();
+    };
+    el.appendChild(chip);
+  });
+  if(hasUngrouped){
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeGroups.has('__ungrouped__') ? '' : ' off');
+    chip.textContent = 'Ungrouped';
+    chip.onclick = ()=>{
+      if(activeGroups.has('__ungrouped__')) activeGroups.delete('__ungrouped__'); else activeGroups.add('__ungrouped__');
+      chip.classList.toggle('off', !activeGroups.has('__ungrouped__'));
+      applyFilters();
+    };
+    el.appendChild(chip);
+  }
+  const datalist = document.getElementById('group-suggestions');
+  datalist.innerHTML = Array.from(groups).sort().map(g=>`<option value="${escapeHtml(g)}">`).join('');
+}
+
+function tripCreatorKey(t){ return t.createdBy ? t.createdBy : '__unknown__'; }
+
+function buildCreatorFilters(){
+  const creators = new Set();
+  let hasUnknown = false;
+  trips.forEach(t=>{
+    const key = tripCreatorKey(t);
+    if(key === '__unknown__') hasUnknown = true; else creators.add(key);
+  });
+  creators.forEach(c=>{ if(!knownCreators.has(c)){ knownCreators.add(c); activeCreators.add(c); } });
+  if(hasUnknown && !knownCreators.has('__unknown__')){ knownCreators.add('__unknown__'); activeCreators.add('__unknown__'); }
+
+  const el = document.getElementById('creator-filters');
+  el.innerHTML = '';
+  if(creators.size <= 1 && !hasUnknown) return;
+  Array.from(creators).sort().forEach(c=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeCreators.has(c) ? '' : ' off');
+    chip.textContent = c;
+    chip.onclick = ()=>{
+      if(activeCreators.has(c)) activeCreators.delete(c); else activeCreators.add(c);
+      chip.classList.toggle('off', !activeCreators.has(c));
+      applyFilters();
+    };
+    el.appendChild(chip);
+  });
+  if(hasUnknown){
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (activeCreators.has('__unknown__') ? '' : ' off');
+    chip.textContent = 'Unattributed';
+    chip.onclick = ()=>{
+      if(activeCreators.has('__unknown__')) activeCreators.delete('__unknown__'); else activeCreators.add('__unknown__');
+      chip.classList.toggle('off', !activeCreators.has('__unknown__'));
+      applyFilters();
+    };
+    el.appendChild(chip);
+  }
+}
+
 function applyFilters(){
+  buildGroupFilters();
+  buildCreatorFilters();
   Object.entries(markers).forEach(([id,m])=>{
     const trip = trips.find(t=>t.id===id);
     if(!trip) return;
-    const visible = activeFilters.has(trip.category);
-    m.setIcon(makeIcon(trip.category, !visible));
+    const visible = activeFilters.has(trip.category) && activeGroups.has(tripGroupKey(trip)) && activeCreators.has(tripCreatorKey(trip));
+    m.setIcon(makeIcon(trip.category, !visible, weekendRatingFor(trip.id)));
     m.setZIndexOffset(visible?100:0);
   });
   renderList();
 }
+function haversineMiles(lat1,lng1,lat2,lng2){
+  const R = 3958.8;
+  const dLat = (lat2-lat1) * Math.PI/180;
+  const dLng = (lng2-lng1) * Math.PI/180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLng/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+let searchQuery = '';
+let sortMode = 'newest';
+
+function sortTrips(list){
+  if(sortMode === 'alpha'){
+    return list.slice().sort((a,b)=> (a.title||'').localeCompare(b.title||''));
+  }
+  if(sortMode === 'nearest'){
+    const center = map.getCenter();
+    return list.slice().sort((a,b)=>
+      haversineMiles(center.lat, center.lng, a.lat, a.lng) - haversineMiles(center.lat, center.lng, b.lat, b.lng)
+    );
+  }
+  return list.slice().sort((a,b)=> b.created - a.created);
+}
+
 function renderList(){
   const list = document.getElementById('trip-list');
   document.getElementById('count').textContent = `${trips.length} waypoint${trips.length===1?'':'s'}`;
-  const visible = trips.filter(t=>activeFilters.has(t.category)).sort((a,b)=>b.created-a.created);
+  let visible = trips.filter(t=>activeFilters.has(t.category) && activeGroups.has(tripGroupKey(t)) && activeCreators.has(tripCreatorKey(t)));
+  if(searchQuery.trim()){
+    const q = searchQuery.trim().toLowerCase();
+    visible = visible.filter(t=> (t.title||'').toLowerCase().includes(q));
+  }
+  visible = sortTrips(visible);
+  const center = sortMode === 'nearest' ? map.getCenter() : null;
   if(trips.length===0){
     list.innerHTML = '<div id="empty-list">No cairns placed yet.</div>';
     return;
   }
   if(visible.length===0){
-    list.innerHTML = '<div id="empty-list">No waypoints match the current filters.</div>';
+    list.innerHTML = '<div id="empty-list">No waypoints match your search or filters.</div>';
     return;
   }
   list.innerHTML='';
@@ -684,8 +1240,9 @@ function renderList(){
     const row = document.createElement('div');
     row.className='trip-row';
     const c = CATEGORIES[t.category];
+    const distBit = center ? ` · ${haversineMiles(center.lat,center.lng,t.lat,t.lng).toFixed(1)} mi away` : '';
     row.innerHTML = `<div class="t-title">${escapeHtml(t.title||'Untitled')}</div>
-      <div class="t-meta"><span class="dot" style="background:${c.color}"></span>${c.label}${t.gpxFileId?' · route attached':''}</div>`;
+      <div class="t-meta"><span class="dot" style="background:${c.color}"></span>${c.label}${t.group?' · '+escapeHtml(t.group):''}${t.createdBy?' · '+escapeHtml(t.createdBy):''}${t.gpxFileId?' · route attached':''}${distBit}</div>`;
     row.onclick = ()=>{
       map.flyTo([t.lat,t.lng], Math.max(map.getZoom(),9), {duration:0.6});
       openDrawer(t.id, false);
@@ -695,7 +1252,7 @@ function renderList(){
   });
 }
 function addMarker(trip){
-  const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category) }).addTo(map);
+  const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category, false, weekendRatingFor(trip.id)) }).addTo(map);
   m.on('click', ()=>{ openDrawer(trip.id, false); if(trip.gpxFileId) showRoute(trip); });
   markers[trip.id] = m;
 }
@@ -704,11 +1261,20 @@ function addMarker(trip){
 
 function hideHint(){ const h = document.getElementById('hint'); if(h) h.style.opacity='0'; }
 
-function setDrawerOwnerState(){
-  const ro = !isOwner;
-  document.getElementById('f-title').disabled = ro;
-  document.getElementById('f-coords').disabled = ro;
-  document.getElementById('f-notes').disabled = ro;
+function canEditTrip(trip){
+  if(!isOwner) return false;
+  if(!trip) return true;
+  if(!trip.createdBy) return true;
+  return trip.createdBy === editorName;
+}
+
+function setDrawerOwnerState(trip){
+  const editable = canEditTrip(trip);
+  document.body.classList.toggle('can-edit-trip', editable);
+  document.getElementById('f-title').disabled = !editable;
+  document.getElementById('f-coords').disabled = !editable;
+  document.getElementById('f-notes').disabled = !editable;
+  document.getElementById('f-group').disabled = !editable;
 }
 
 function openDrawer(id, isNew, latlng){
@@ -717,15 +1283,18 @@ function openDrawer(id, isNew, latlng){
   pendingGpxAction = null;
   pendingGpxText = null;
   document.getElementById('gpx-file').value = '';
+  document.getElementById('tide-info').textContent = '';
+  document.getElementById('weather-detail').textContent = '';
   document.getElementById('coord-sub').textContent = "Paste straight from Google Maps: latitude, longitude";
   const drawer = document.getElementById('drawer');
-  setDrawerOwnerState();
   if(isNew){
+    setDrawerOwnerState(null);
     if(!isOwner) return;
     pendingId = 'w' + Date.now();
     const center = latlng || map.getCenter();
     document.getElementById('f-title').value = '';
     document.getElementById('f-notes').value = '';
+    document.getElementById('f-group').value = '';
     document.getElementById('f-coords').value = `${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
     document.getElementById('f-coords').classList.remove('invalid');
     selectCategory('hike');
@@ -737,13 +1306,17 @@ function openDrawer(id, isNew, latlng){
   } else {
     pendingId = id;
     const t = trips.find(tr=>tr.id===id);
+    setDrawerOwnerState(t);
+    document.getElementById('not-your-pin-note').textContent = t.createdBy ? `Added by ${t.createdBy} — only they can edit this one.` : 'Added by someone else — only they can edit this one.';
     document.getElementById('f-title').value = t.title;
     document.getElementById('f-notes').value = t.notes;
+    document.getElementById('f-group').value = t.group || '';
     document.getElementById('f-coords').value = `${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`;
     document.getElementById('f-coords').classList.remove('invalid');
     selectCategory(t.category);
     refreshGpxUi(!!t.gpxFileId);
     renderLinkedPhotos(t.id);
+    renderWeatherDetail(t);
     document.getElementById('richer-content').style.display = 'block';
     document.getElementById('save-first-note').style.display = 'none';
     t.checklist = t.checklist || [];
@@ -752,10 +1325,20 @@ function openDrawer(id, isNew, latlng){
     renderAttachments(t);
   }
   drawer.classList.add('open');
+  drawer.classList.remove('peek');
+  if(!isNew){
+    const t = trips.find(tr=>tr.id===id);
+    if(t && t.gpxFileId && window.matchMedia('(max-width: 700px)').matches){
+      drawer.classList.add('peek');
+    }
+  }
   document.getElementById('save-hint').textContent='';
-  setTimeout(()=>document.getElementById('f-title').focus(), 200);
+  if(!drawer.classList.contains('peek')) setTimeout(()=>document.getElementById('f-title').focus(), 200);
   hideHint();
 }
+document.getElementById('drawer-handle').onclick = ()=>{
+  document.getElementById('drawer').classList.toggle('peek');
+};
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   currentId = null; pendingId = null; isNewPin = false;
@@ -778,9 +1361,102 @@ function parseGpxText(text){
   if(doc.querySelector('parsererror')) return [];
   let pts = Array.from(doc.querySelectorAll('trkpt, rtept'));
   if(pts.length===0) pts = Array.from(doc.querySelectorAll('wpt'));
-  return pts.map(p=>[parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]).filter(c=>Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  return pts.map(p=>{
+    const lat = parseFloat(p.getAttribute('lat'));
+    const lng = parseFloat(p.getAttribute('lon'));
+    const eleEl = p.querySelector('ele');
+    const ele = eleEl ? parseFloat(eleEl.textContent) : null;
+    return [lat, lng, Number.isFinite(ele) ? ele : null];
+  }).filter(c=>Number.isFinite(c[0]) && Number.isFinite(c[1]));
 }
-function clearRoute(){ if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; } }
+let mileMarkersLayer = null;
+
+function computeMileMarkers(coords){
+  const markers = [];
+  let cumulative = 0;
+  let nextMile = 1;
+  for(let i=1;i<coords.length;i++){
+    const [lat1,lng1] = coords[i-1];
+    const [lat2,lng2] = coords[i];
+    const segDist = haversineMiles(lat1,lng1,lat2,lng2);
+    while(segDist > 0 && cumulative + segDist >= nextMile){
+      const fraction = (nextMile - cumulative) / segDist;
+      markers.push({ lat: lat1 + (lat2-lat1)*fraction, lng: lng1 + (lng2-lng1)*fraction, mile: nextMile });
+      nextMile++;
+    }
+    cumulative += segDist;
+  }
+  return { markers, totalMiles: cumulative };
+}
+
+function cumulativeDistances(coords){
+  const dists = [0];
+  for(let i=1;i<coords.length;i++){
+    dists.push(dists[i-1] + haversineMiles(coords[i-1][0],coords[i-1][1],coords[i][0],coords[i][1]));
+  }
+  return dists;
+}
+
+async function getElevationProfile(coords){
+  const hasEle = coords.every(c => Number.isFinite(c[2]));
+  if(hasEle) return coords.map(c=>c[2]);
+  try{
+    const maxPoints = 100;
+    const step = Math.max(1, Math.ceil(coords.length / maxPoints));
+    const sampledIdx = [];
+    for(let i=0;i<coords.length;i+=step) sampledIdx.push(i);
+    if(sampledIdx[sampledIdx.length-1] !== coords.length-1) sampledIdx.push(coords.length-1);
+    const lats = sampledIdx.map(i=>coords[i][0].toFixed(5)).join(',');
+    const lngs = sampledIdx.map(i=>coords[i][1].toFixed(5)).join(',');
+    const res = await fetch(`https://api.open-meteo.com/v1/elevation?latitude=${lats}&longitude=${lngs}`);
+    if(!res.ok) return null;
+    const data = await res.json();
+    const sampledEle = data.elevation || [];
+    if(sampledEle.length !== sampledIdx.length) return null;
+    return coords.map((c,i)=>{
+      let nearest = 0, best = Infinity;
+      sampledIdx.forEach((si,k)=>{ const d = Math.abs(si-i); if(d<best){ best=d; nearest=k; } });
+      return sampledEle[nearest];
+    });
+  }catch(e){ return null; }
+}
+
+function renderElevationChart(distances, elevations, color){
+  const container = document.getElementById('elevation-chart');
+  const label = document.getElementById('elevation-label');
+  const valid = elevations.filter(e=>e!=null);
+  if(valid.length < 2){ container.innerHTML=''; document.getElementById('elevation-stats').textContent=''; label.style.display='none'; return; }
+  label.style.display = 'block';
+  const w = 320, h = 90, pad = 4;
+  const maxD = distances[distances.length-1] || 1;
+  const minE = Math.min(...valid), maxE = Math.max(...valid);
+  const range = Math.max(1, maxE-minE);
+  const pts = distances.map((d,i)=>{
+    const x = pad + (d/maxD)*(w-2*pad);
+    const e = elevations[i] ?? minE;
+    const y = h-pad - ((e-minE)/range)*(h-2*pad);
+    return `${x.toFixed(1)},${y.toFixed(1)}`;
+  }).join(' ');
+  container.innerHTML = `<svg viewBox="0 0 ${w} ${h}" width="100%" height="90" preserveAspectRatio="none">
+    <polygon points="${pad},${h-pad} ${pts} ${w-pad},${h-pad}" fill="${color}" opacity="0.22"></polygon>
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="2"></polyline>
+  </svg>`;
+  let ascent=0, descent=0;
+  for(let i=1;i<elevations.length;i++){
+    if(elevations[i]==null || elevations[i-1]==null) continue;
+    const diff = elevations[i]-elevations[i-1];
+    if(diff>0) ascent+=diff; else descent-=diff;
+  }
+  document.getElementById('elevation-stats').textContent = `${Math.round(minE)}–${Math.round(maxE)} m · ↑${Math.round(ascent)} m ↓${Math.round(descent)} m`;
+}
+
+function clearRoute(){
+  if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; }
+  if(mileMarkersLayer){ map.removeLayer(mileMarkersLayer); mileMarkersLayer=null; }
+  document.getElementById('elevation-chart').innerHTML = '';
+  document.getElementById('elevation-stats').textContent = '';
+  document.getElementById('elevation-label').style.display = 'none';
+}
 async function showRoute(trip){
   clearRoute();
   if(!trip.gpxFileId) return;
@@ -791,7 +1467,31 @@ async function showRoute(trip){
     const coords = parseGpxText(text);
     if(coords.length < 2) return;
     routeLayer = L.polyline(coords, { color: CATEGORIES[trip.category].color, weight:4, opacity:0.85 }).addTo(map);
+    const { markers, totalMiles } = computeMileMarkers(coords);
+    mileMarkersLayer = L.layerGroup();
+    markers.forEach(m=>{
+      const dot = L.circleMarker([m.lat, m.lng], { radius:5, color:'#fff', weight:2, fillColor:CATEGORIES[trip.category].color, fillOpacity:1 });
+      dot.bindTooltip(String(m.mile), { permanent:true, direction:'top', offset:[0,-6], className:'mile-tooltip' });
+      dot.addTo(mileMarkersLayer);
+    });
+    mileMarkersLayer.addTo(map);
+    if(currentId === trip.id){
+      document.getElementById('gpx-status').textContent = `Route attached · ${totalMiles.toFixed(1)} mi`;
+    }
     map.fitBounds(routeLayer.getBounds(), { padding:[70,70] });
+
+    if(currentId === trip.id){
+      document.getElementById('elevation-chart').innerHTML = '<div class="elev-loading">Loading elevation…</div>';
+      const elevations = await getElevationProfile(coords);
+      if(currentId === trip.id){
+        if(elevations){
+          renderElevationChart(cumulativeDistances(coords), elevations, CATEGORIES[trip.category].color);
+        } else {
+          document.getElementById('elevation-chart').innerHTML = '';
+          document.getElementById('elevation-label').style.display = 'none';
+        }
+      }
+    }
   }catch(e){}
 }
 document.getElementById('btn-gpx-upload').onclick = ()=> document.getElementById('gpx-file').click();
@@ -881,16 +1581,23 @@ function addChecklistItem(trip){
   input.value = '';
   renderChecklist(trip);
 }
+function isVideoType(mimeType){ return !!mimeType && mimeType.startsWith('video/'); }
+
 function renderAttachments(trip){
   const grid = document.getElementById('attachments-grid');
   grid.innerHTML = '';
   (trip.attachments || []).forEach(att=>{
     const wrap = document.createElement('div');
     wrap.className = 'attachment-thumb';
-    const img = document.createElement('img');
-    img.src = publicFileUrl(att.id);
-    img.onclick = ()=> openAttachmentViewer(trip, att.id);
-    wrap.appendChild(img);
+    if(isVideoType(att.mimeType)){
+      wrap.innerHTML = `<div class="video-thumb">▶</div>`;
+      wrap.querySelector('.video-thumb').onclick = ()=> openAttachmentViewer(trip, att.id);
+    } else {
+      const img = document.createElement('img');
+      img.src = publicFileUrl(att.id);
+      img.onclick = ()=> openAttachmentViewer(trip, att.id);
+      wrap.appendChild(img);
+    }
     if(isOwner){
       const del = document.createElement('button');
       del.textContent = '✕';
@@ -906,8 +1613,9 @@ async function addAttachmentFiles(trip, files){
   const folderId = await ensureAppFolder();
   for(const file of files){
     try{
-      const id = await driveCreateFile(file, file.name, folderId, file.type || 'image/jpeg');
-      trip.attachments.push({ id, name:file.name });
+      const mimeType = file.type || 'image/jpeg';
+      const id = await driveCreateFile(file, file.name, folderId, mimeType);
+      trip.attachments.push({ id, name:file.name, mimeType, addedAt:Date.now() });
     }catch(e){}
   }
   scheduleCloudSave();
@@ -921,17 +1629,29 @@ function removeAttachment(trip, id){
 let viewerAttachment = null;
 function openAttachmentViewer(trip, id){
   viewerAttachment = { trip, id };
-  document.getElementById('attachment-viewer-img').src = publicFileUrl(id);
+  const att = (trip.attachments || []).find(a=>a.id===id);
+  const isVideo = att && isVideoType(att.mimeType);
+  document.getElementById('attachment-viewer-img').style.display = isVideo ? 'none' : 'block';
+  document.getElementById('attachment-viewer-video').style.display = isVideo ? 'block' : 'none';
+  if(isVideo){
+    document.getElementById('attachment-viewer-video').src = publicFileUrl(id);
+  } else {
+    document.getElementById('attachment-viewer-img').src = publicFileUrl(id);
+  }
   document.getElementById('attachment-viewer').classList.add('open');
 }
 document.getElementById('attachment-viewer-close').onclick = ()=>{
   document.getElementById('attachment-viewer').classList.remove('open');
+  document.getElementById('attachment-viewer-video').pause();
+  document.getElementById('attachment-viewer-video').removeAttribute('src');
   viewerAttachment = null;
 };
 document.getElementById('attachment-remove').onclick = ()=>{
   if(!viewerAttachment) return;
   removeAttachment(viewerAttachment.trip, viewerAttachment.id);
   document.getElementById('attachment-viewer').classList.remove('open');
+  document.getElementById('attachment-viewer-video').pause();
+  document.getElementById('attachment-viewer-video').removeAttribute('src');
   viewerAttachment = null;
 };
 document.getElementById('btn-checklist-add').onclick = ()=>{
@@ -1004,7 +1724,8 @@ function renderUnlocatedList(){
   unlocated.forEach(p=>{
     const row = document.createElement('div');
     row.className = 'unlocated-row';
-    row.innerHTML = `<img src="${publicFileUrl(p.id)}"><span>${escapeHtml(p.name)}</span>`;
+    const thumb = isVideoType(p.mimeType) ? `<div class="video-thumb" style="width:32px;height:32px;font-size:12px;">▶</div>` : `<img src="${publicFileUrl(p.id)}">`;
+    row.innerHTML = `${thumb}<span>${escapeHtml(formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt))}</span>`;
     row.onclick = ()=> openPhotoViewer(p.id);
     box.appendChild(row);
   });
@@ -1019,9 +1740,12 @@ async function checkForNewPhotos(){
     const existingIds = new Set(photos.map(p=>p.id));
     const newFiles = files.filter(f=>!existingIds.has(f.id));
     for(const f of newFiles){
-      const blob = await driveDownloadFile(f.id, token);
-      const meta = await extractPhotoMeta(blob);
-      const photo = { id:f.id, name:f.name, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
+      let meta = { lat:null, lng:null, takenAt:null };
+      if(!isVideoType(f.mimeType)){
+        const blob = await driveDownloadFile(f.id, token);
+        meta = await extractPhotoMeta(blob);
+      }
+      const photo = { id:f.id, name:f.name, mimeType:f.mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
       photos.push(photo);
       if(photo.lat && photo.lng) addPhotoMarker(photo);
     }
@@ -1039,18 +1763,70 @@ function populateLinkSelect(currentLinkedId){
     `<option value="${t.id}"${t.id===currentLinkedId?' selected':''}>${escapeHtml(t.title)}</option>`
   ).join('');
 }
+function findSameDayLocation(item){
+  const itemDate = item.takenAt || item.importedAt;
+  if(!itemDate) return null;
+  const key = new Date(itemDate).toDateString();
+  let best = null, bestDiff = Infinity;
+  photos.forEach(p=>{
+    if(p.id === item.id || !p.lat || !p.lng) return;
+    const pDate = p.takenAt || p.importedAt;
+    if(!pDate || new Date(pDate).toDateString() !== key) return;
+    const diff = Math.abs(pDate - itemDate);
+    if(diff < bestDiff){ bestDiff = diff; best = p; }
+  });
+  return best;
+}
+
 let viewerPhotoId = null;
 function openPhotoViewer(id){
   const p = photos.find(ph=>ph.id===id);
   if(!p) return;
   viewerPhotoId = id;
-  document.getElementById('photo-viewer-img').src = publicFileUrl(id);
-  document.getElementById('photo-viewer-name').textContent = p.name;
+  const isVideo = isVideoType(p.mimeType);
+  document.getElementById('photo-viewer-img').style.display = isVideo ? 'none' : 'block';
+  document.getElementById('photo-viewer-video').style.display = isVideo ? 'block' : 'none';
+  if(isVideo){ document.getElementById('photo-viewer-video').src = publicFileUrl(id); }
+  else{ document.getElementById('photo-viewer-img').src = publicFileUrl(id); }
+  document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt);
   populateLinkSelect(p.linkedTripId);
+
+  const needsLocation = isOwner && (!p.lat || !p.lng);
+  document.getElementById('photo-location-set').style.display = needsLocation ? 'block' : 'none';
+  if(needsLocation){
+    const match = findSameDayLocation(p);
+    const input = document.getElementById('photo-location-input');
+    const hint = document.getElementById('photo-location-hint');
+    if(match){
+      input.value = `${match.lat.toFixed(6)}, ${match.lng.toFixed(6)}`;
+      hint.textContent = `Suggested from "${match.name}", taken the same day — edit if that's not right.`;
+    } else {
+      input.value = '';
+      hint.textContent = 'No same-day photo found nearby — paste coordinates manually.';
+    }
+  }
   document.getElementById('photo-viewer').classList.add('open');
 }
+document.getElementById('btn-photo-set-location').onclick = ()=>{
+  const p = photos.find(ph=>ph.id===viewerPhotoId);
+  if(!p) return;
+  const val = document.getElementById('photo-location-input').value;
+  const parts = val.split(',').map(s=>parseFloat(s.trim()));
+  if(parts.length !== 2 || !Number.isFinite(parts[0]) || !Number.isFinite(parts[1]) || Math.abs(parts[0])>90 || Math.abs(parts[1])>180){
+    document.getElementById('photo-location-hint').textContent = 'Enter coordinates as: latitude, longitude';
+    return;
+  }
+  p.lat = parts[0]; p.lng = parts[1];
+  addPhotoMarker(p);
+  scheduleCloudSave();
+  renderUnlocatedList();
+  applyPhotoDateFilter();
+  document.getElementById('photo-location-set').style.display = 'none';
+};
 document.getElementById('photo-viewer-close').onclick = ()=>{
   document.getElementById('photo-viewer').classList.remove('open');
+  document.getElementById('photo-viewer-video').pause();
+  document.getElementById('photo-viewer-video').removeAttribute('src');
   viewerPhotoId = null;
 };
 document.getElementById('photo-link-select').onchange = (e)=>{
@@ -1145,12 +1921,79 @@ document.getElementById('btn-save-folder').onclick = ()=>{
 };
 document.getElementById('btn-check-photos').onclick = checkForNewPhotos;
 
+/* ---------- Gallery ---------- */
+
+let galleryFilter = 'all';
+
+function collectGalleryItems(){
+  const items = [];
+  photos.forEach(p=>{
+    const trip = p.linkedTripId ? trips.find(t=>t.id===p.linkedTripId) : null;
+    items.push({
+      kind:'location', id:p.id, name:p.name, mimeType:p.mimeType,
+      date: p.takenAt || p.importedAt, caption: trip ? trip.title : 'Unlinked',
+      openFn: ()=> openPhotoViewer(p.id),
+    });
+  });
+  trips.forEach(t=>{
+    (t.attachments || []).forEach(a=>{
+      items.push({
+        kind:'notes', id:a.id, name:a.name, mimeType:a.mimeType,
+        date: a.addedAt || t.created, caption: t.title,
+        openFn: ()=> openAttachmentViewer(t, a.id),
+      });
+    });
+  });
+  return items.sort((a,b)=> (b.date||0) - (a.date||0));
+}
+
+function renderGallery(){
+  const grid = document.getElementById('gallery-grid');
+  let items = collectGalleryItems();
+  if(galleryFilter === 'location') items = items.filter(i=>i.kind==='location');
+  if(galleryFilter === 'notes') items = items.filter(i=>i.kind==='notes');
+  document.getElementById('gallery-count').textContent = `${items.length} item${items.length===1?'':'s'}`;
+  grid.innerHTML = '';
+  if(items.length === 0){
+    grid.innerHTML = '<div id="gallery-empty">Nothing here yet.</div>';
+    return;
+  }
+  items.forEach(item=>{
+    const tile = document.createElement('div');
+    tile.className = 'gallery-tile';
+    if(isVideoType(item.mimeType)){
+      tile.innerHTML = `<div class="video-thumb">▶</div><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
+    } else {
+      tile.innerHTML = `<img src="${publicFileUrl(item.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
+    }
+    tile.onclick = item.openFn;
+    grid.appendChild(tile);
+  });
+}
+
+document.getElementById('btn-gallery').onclick = ()=>{
+  document.getElementById('gallery-screen').classList.add('open');
+  renderGallery();
+};
+document.getElementById('btn-gallery-close').onclick = ()=>{
+  document.getElementById('gallery-screen').classList.remove('open');
+};
+document.querySelectorAll('#gallery-filters button').forEach(btn=>{
+  btn.onclick = ()=>{
+    galleryFilter = btn.dataset.gfilter;
+    document.querySelectorAll('#gallery-filters button').forEach(b=> b.classList.toggle('active', b===btn));
+    renderGallery();
+  };
+});
+
 /* ---------- Save / delete waypoint ---------- */
 
 document.getElementById('btn-save').onclick = async ()=>{
-  if(!isOwner) return;
+  const existingTrip = !isNewPin ? trips.find(tr=>tr.id===currentId) : null;
+  if(!canEditTrip(existingTrip)) return;
   const title = document.getElementById('f-title').value.trim() || 'Untitled';
   const notes = document.getElementById('f-notes').value;
+  const group = document.getElementById('f-group').value.trim();
   const category = document.getElementById('cat-select').dataset.selected || 'hike';
   const coordsField = document.getElementById('f-coords');
   const parts = coordsField.value.split(',').map(s=>parseFloat(s.trim()));
@@ -1165,7 +2008,7 @@ document.getElementById('btn-save').onclick = async ()=>{
   const folderId = await ensureAppFolder();
 
   if(isNewPin){
-    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), gpxFileId:null, checklist:[], attachments:[] };
+    const trip = { id:pendingId, lat, lng, title, notes, group, category, created:Date.now(), createdBy: editorName || null, gpxFileId:null, checklist:[], attachments:[] };
     trips.push(trip);
     addMarker(trip);
     if(pendingGpxAction==='add'){
@@ -1177,7 +2020,7 @@ document.getElementById('btn-save').onclick = async ()=>{
     }
   } else {
     const t = trips.find(tr=>tr.id===currentId);
-    t.title = title; t.notes = notes; t.category = category; t.lat = lat; t.lng = lng;
+    t.title = title; t.notes = notes; t.group = group; t.category = category; t.lat = lat; t.lng = lng;
     markers[currentId].setLatLng([lat,lng]);
     markers[currentId].setIcon(makeIcon(category));
     if(pendingGpxAction==='add'){
@@ -1196,13 +2039,16 @@ document.getElementById('btn-save').onclick = async ()=>{
   renderList();
   refreshAllRoutesIfOn();
   closeDrawer();
+  refreshWaypointWeather();
 };
 
 document.getElementById('btn-cancel').onclick = ()=> closeDrawer();
 document.getElementById('drawer-close').onclick = ()=> closeDrawer();
 
 document.getElementById('btn-delete').onclick = ()=>{
-  if(!currentId || !isOwner) return;
+  if(!currentId) return;
+  const existingTrip = trips.find(tr=>tr.id===currentId);
+  if(!canEditTrip(existingTrip)) return;
   if(!confirm('Delete this cairn? This cannot be undone.')) return;
   trips = trips.filter(tr=>tr.id!==currentId);
   if(markers[currentId]){ map.removeLayer(markers[currentId]); delete markers[currentId]; }
@@ -1291,7 +2137,33 @@ document.getElementById('import-file').onchange = (e)=>{
 
 /* ---------- Boot ---------- */
 
+document.getElementById('search-input').addEventListener('input', (e)=>{
+  searchQuery = e.target.value;
+  renderList();
+});
+document.querySelectorAll('#sort-row button').forEach(btn=>{
+  btn.onclick = ()=>{
+    sortMode = btn.dataset.sort;
+    document.querySelectorAll('#sort-row button').forEach(b=> b.classList.toggle('active', b===btn));
+    renderList();
+  };
+});
+map.on('moveend', ()=>{ if(sortMode === 'nearest') renderList(); });
+
+function updateOnlineStatus(){
+  document.getElementById('offline-banner').classList.toggle('show', !navigator.onLine);
+}
+window.addEventListener('online', updateOnlineStatus);
+window.addEventListener('offline', updateOnlineStatus);
+
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
 async function boot(){
+  updateOnlineStatus();
   buildFilters();
   buildCatSelect();
   applyOwnerUI();
@@ -1302,6 +2174,7 @@ async function boot(){
   renderList();
   loadPhotoMarkers();
   initDriveAuth();
+  refreshWaypointWeather();
 }
 boot();
 </script>
