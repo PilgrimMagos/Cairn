@@ -11,161 +11,76 @@
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
   :root{
-    --ink:#0f1e1c;
-    --ink-soft:#20342f;
-    --parchment:#faf3e0;
-    --parchment-dim:#e9dfc3;
-    --parchment-line: rgba(15,30,28,0.16);
-    --hike:#1f6b30;
-    --hike-dark:#123f1c;
-    --history:#c4460f;
-    --history-dark:#822c08;
-    --town:#6a2f8c;
-    --town-dark:#43195a;
-    --food:#d98a00;
-    --food-dark:#8f5b00;
-    --wild:#0d5f7a;
-    --wild-dark:#083c4d;
+    --ink:#0f1e1c; --ink-soft:#20342f;
+    --parchment:#faf3e0; --parchment-dim:#e9dfc3; --parchment-line: rgba(15,30,28,0.16);
+    --hike:#1f6b30; --history:#c4460f; --history-dark:#822c08;
+    --town:#6a2f8c; --food:#d98a00; --food-dark:#8f5b00; --wild:#0d5f7a;
   }
   *{box-sizing:border-box;}
   html,body{height:100%; height:100dvh; margin:0;}
-  body{
-    font-family:'IBM Plex Sans', sans-serif;
-    background:var(--ink);
-    color:var(--parchment);
-    overflow:hidden;
-  }
+  body{ font-family:'IBM Plex Sans', sans-serif; background:var(--ink); color:var(--parchment); overflow:hidden; }
   #app{ position:relative; width:100vw; height:100vh; height:100dvh; }
   #map{ position:absolute; inset:0; background:#cfe0dd; }
-  .leaflet-tile-pane{
-    filter: saturate(1.25) contrast(1.12) brightness(1.01);
-  }
-  .leaflet-control-attribution{
-    background:rgba(250,243,224,0.88) !important;
-    font-family:'IBM Plex Mono', monospace;
-    font-size:10px !important;
-    color:var(--ink-soft) !important;
-  }
-  .leaflet-control-zoom a{
-    background:var(--parchment) !important;
-    color:var(--ink) !important;
-    border-color:var(--parchment-line) !important;
-  }
+  .leaflet-tile-pane{ filter: saturate(1.25) contrast(1.12) brightness(1.01); }
+  .leaflet-control-attribution{ background:rgba(250,243,224,0.88) !important; font-family:'IBM Plex Mono', monospace; font-size:10px !important; color:var(--ink-soft) !important; }
+  .leaflet-control-zoom a{ background:var(--parchment) !important; color:var(--ink) !important; border-color:var(--parchment-line) !important; }
 
-  #header{
-    position:absolute; top:0; left:0; right:0; z-index:1000;
-    display:flex; align-items:center; justify-content:space-between;
-    padding:18px 22px;
-    pointer-events:none;
-  }
+  #header{ position:absolute; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:space-between; padding:18px 22px; pointer-events:none; }
   #brand{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
   #brand svg{ width:26px; height:26px; }
-  #brand h1{
-    font-family:'Fraunces', serif; font-weight:600; font-style:italic; font-size:22px;
-    margin:0; color:var(--parchment); letter-spacing:0.01em;
-  }
+  #brand h1{ font-family:'Fraunces', serif; font-weight:600; font-style:italic; font-size:22px; margin:0; color:var(--parchment); letter-spacing:0.01em; }
   #count{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--parchment-dim); opacity:0.9; margin-left:2px; }
-  #header-right{ display:flex; gap:10px; pointer-events:auto; }
-  .pill-btn{
-    font-family:'IBM Plex Sans', sans-serif; font-size:12.5px; font-weight:500;
-    color:var(--parchment); background:rgba(15,30,28,0.62);
-    border:1px solid rgba(250,243,224,0.28); border-radius:20px; padding:8px 14px; cursor:pointer;
-    backdrop-filter: blur(6px); transition: background 0.15s ease, border-color 0.15s ease;
-  }
+  #header-right{ display:flex; gap:10px; pointer-events:auto; flex-wrap:wrap; justify-content:flex-end; }
+  .pill-btn{ font-family:'IBM Plex Sans', sans-serif; font-size:12.5px; font-weight:500; color:var(--parchment); background:rgba(15,30,28,0.62); border:1px solid rgba(250,243,224,0.28); border-radius:20px; padding:8px 14px; cursor:pointer; backdrop-filter: blur(6px); transition: background 0.15s ease, border-color 0.15s ease; }
   .pill-btn:hover{ background:rgba(15,30,28,0.85); border-color:rgba(250,243,224,0.5); }
   .pill-btn.active{ background:var(--history); border-color:var(--history); color:#fff; }
+  #btn-signin.owner{ background:var(--hike); border-color:var(--hike); color:#fff; }
 
-  #sidebar{
-    position:absolute; top:66px; left:16px; bottom:16px; z-index:900; width:270px;
-    background:rgba(15,30,28,0.93); border:1px solid rgba(250,243,224,0.16); border-radius:14px;
-    backdrop-filter: blur(8px); display:flex; flex-direction:column; overflow:hidden;
-    transition: transform 0.25s ease, opacity 0.25s ease;
-  }
+  #sidebar{ position:absolute; top:66px; left:16px; bottom:16px; z-index:900; width:270px; background:rgba(15,30,28,0.93); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); display:flex; flex-direction:column; overflow:hidden; transition: transform 0.25s ease, opacity 0.25s ease; }
   #sidebar.hidden{ transform: translateX(-300px); opacity:0; pointer-events:none; }
   #sidebar-head{ padding:14px 16px 10px; border-bottom:1px solid rgba(250,243,224,0.14); }
   #sidebar-head h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 10px; color:var(--parchment); }
   #filters{ display:flex; flex-wrap:wrap; gap:6px; }
-  .chip{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:4px 9px; border-radius:20px;
-    border:1px solid rgba(250,243,224,0.3); color:var(--parchment-dim); cursor:pointer;
-    display:flex; align-items:center; gap:5px; user-select:none;
-  }
+  .chip{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:4px 9px; border-radius:20px; border:1px solid rgba(250,243,224,0.3); color:var(--parchment-dim); cursor:pointer; display:flex; align-items:center; gap:5px; user-select:none; }
   .chip .dot{ width:7px; height:7px; border-radius:50%; }
   .chip.off{ opacity:0.35; }
   #trip-list{ overflow-y:auto; flex:1; padding:6px 8px 12px; }
   .trip-row{ padding:10px 10px; border-radius:9px; cursor:pointer; margin-bottom:2px; display:flex; flex-direction:column; gap:3px; }
   .trip-row:hover{ background:rgba(250,243,224,0.1); }
   .trip-row .t-title{ font-family:'Fraunces', serif; font-weight:500; font-size:14px; color:var(--parchment); }
-  .trip-row .t-meta{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.8;
-    display:flex; align-items:center; gap:6px;
-  }
+  .trip-row .t-meta{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.8; display:flex; align-items:center; gap:6px; }
   .trip-row .t-meta .dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
   #empty-list{ padding:18px 12px; font-size:12.5px; color:var(--parchment-dim); opacity:0.75; line-height:1.5; }
 
-  #hint{
-    position:absolute; left:50%; top:26px; transform:translateX(-50%); z-index:800;
-    font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:14.5px;
-    color:var(--ink); background:var(--parchment); border:1px solid var(--parchment-line);
-    padding:9px 18px; border-radius:24px; box-shadow:0 6px 18px rgba(0,0,0,0.3);
-    pointer-events:none; transition:opacity 0.4s ease;
-  }
+  #hint{ position:absolute; left:50%; top:26px; transform:translateX(-50%); z-index:800; font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:14.5px; color:var(--ink); background:var(--parchment); border:1px solid var(--parchment-line); padding:9px 18px; border-radius:24px; box-shadow:0 6px 18px rgba(0,0,0,0.3); pointer-events:none; transition:opacity 0.4s ease; }
 
   .cairn-icon{ overflow:visible; }
   .cairn-icon svg{ display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
   .cairn-icon.dimmed{ opacity:0.15; }
 
-  #drawer{
-    position:absolute; top:0; right:0; bottom:0; z-index:1100; width:380px;
-    background:var(--parchment); color:var(--ink); box-shadow:-8px 0 24px rgba(0,0,0,0.4);
-    transform:translateX(100%); transition:transform 0.28s cubic-bezier(.22,1,.36,1);
-    display:flex; flex-direction:column;
-  }
+  #drawer{ position:absolute; top:0; right:0; bottom:0; z-index:1100; width:380px; background:var(--parchment); color:var(--ink); box-shadow:-8px 0 24px rgba(0,0,0,0.4); transform:translateX(100%); transition:transform 0.28s cubic-bezier(.22,1,.36,1); display:flex; flex-direction:column; }
   #drawer.open{ transform:translateX(0); }
   #drawer-inner{ padding:24px 24px 20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; }
-  #drawer-close{
-    align-self:flex-end; background:none; border:none; cursor:pointer;
-    color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65;
-  }
+  #drawer-close{ align-self:flex-end; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65; }
   #drawer-close:hover{ opacity:1; }
-  .field-label{
-    font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
-    color:var(--ink-soft); opacity:0.7; margin:16px 0 6px;
-  }
+  .field-label{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); opacity:0.7; margin:16px 0 6px; }
   .field-label:first-of-type{ margin-top:0; }
-  #f-title{
-    font-family:'Fraunces', serif; font-weight:600; font-size:23px;
-    border:none; background:none; color:var(--ink); width:100%; padding:0; border-bottom:1px solid transparent;
-  }
+  #f-title{ font-family:'Fraunces', serif; font-weight:600; font-size:23px; border:none; background:none; color:var(--ink); width:100%; padding:0; border-bottom:1px solid transparent; }
   #f-title:focus{ outline:none; border-bottom:1px solid var(--parchment-line); }
   #cat-select{ display:flex; flex-wrap:wrap; gap:7px; }
-  .cat-opt{
-    font-family:'IBM Plex Sans', sans-serif; font-size:12px; font-weight:500;
-    padding:6px 12px; border-radius:20px; cursor:pointer; border:1.5px solid transparent; color:#fff; opacity:0.55;
-  }
+  .cat-opt{ font-family:'IBM Plex Sans', sans-serif; font-size:12px; font-weight:500; padding:6px 12px; border-radius:20px; cursor:pointer; border:1.5px solid transparent; color:#fff; opacity:0.55; }
   .cat-opt.active{ opacity:1; border-color:rgba(0,0,0,0.3); }
-  #f-coords{
-    width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px;
-    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink);
-  }
+  #f-coords{ width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
   #f-coords:focus{ outline:none; border-color:var(--ink-soft); }
   #f-coords.invalid{ border-color:var(--history); }
   #coord-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft); opacity:0.55; margin-top:5px; }
-  #f-notes{
-    font-family:'IBM Plex Sans', sans-serif; font-size:14px; line-height:1.6;
-    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.45); border-radius:8px; padding:10px 12px;
-    resize:vertical; min-height:120px; color:var(--ink); width:100%;
-  }
+  #f-notes{ font-family:'IBM Plex Sans', sans-serif; font-size:14px; line-height:1.6; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.45); border-radius:8px; padding:10px 12px; resize:vertical; min-height:120px; color:var(--ink); width:100%; }
   #f-notes:focus{ outline:none; border-color:var(--ink-soft); }
-  #gpx-box{
-    border:1px dashed var(--parchment-line); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-  }
+  input:disabled, textarea:disabled{ opacity:0.7; cursor:default; }
+  #gpx-box{ border:1px dashed var(--parchment-line); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
   #gpx-status{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); flex:1; }
   #drawer-actions{ display:flex; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid var(--parchment-line); }
-  .btn{
-    font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:500;
-    padding:9px 16px; border-radius:8px; cursor:pointer; border:1px solid var(--parchment-line); background:transparent; color:var(--ink);
-  }
+  .btn{ font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:500; padding:9px 16px; border-radius:8px; cursor:pointer; border:1px solid var(--parchment-line); background:transparent; color:var(--ink); }
   .btn:hover{ background:rgba(15,30,28,0.08); }
   .btn.primary{ background:var(--ink); color:var(--parchment); border-color:var(--ink); }
   .btn.primary:hover{ background:var(--ink-soft); }
@@ -174,31 +89,21 @@
   .btn.small{ font-size:12px; padding:7px 12px; }
   #save-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.55; margin-top:10px; text-align:center; height:14px; }
 
-  #photo-panel{
-    position:absolute; top:66px; right:16px; z-index:900; width:300px;
-    background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px;
-    backdrop-filter: blur(8px); padding:16px; display:none;
-  }
+  #photo-panel{ position:absolute; top:66px; right:16px; z-index:900; width:300px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; }
   #photo-panel.open{ display:block; }
   #photo-panel h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 12px; color:var(--parchment); }
   #photo-panel .field-label{ color:var(--parchment-dim); opacity:0.75; }
-  #photo-panel input{
-    width:100%; font-family:'IBM Plex Mono', monospace; font-size:12px;
-    background:rgba(250,243,224,0.08); border:1px solid rgba(250,243,224,0.25); border-radius:8px;
-    padding:8px 10px; color:var(--parchment);
-  }
+  #photo-panel input{ width:100%; font-family:'IBM Plex Mono', monospace; font-size:12px; background:rgba(250,243,224,0.08); border:1px solid rgba(250,243,224,0.25); border-radius:8px; padding:8px 10px; color:var(--parchment); }
   #photo-panel input:focus{ outline:none; border-color:rgba(250,243,224,0.55); }
   #photo-panel .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
   #photo-panel .btn:hover{ background:rgba(250,243,224,0.1); }
   #photo-panel .btn.primary{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
-  #photo-panel .btn.primary:hover{ background:#fff; }
   #photo-status{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); opacity:0.85; margin:10px 0; line-height:1.5; }
   #photo-panel-actions{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px; }
   #unlocated-list{ margin-top:14px; max-height:180px; overflow-y:auto; }
   .unlocated-row{ display:flex; align-items:center; gap:8px; padding:6px 0; border-top:1px solid rgba(250,243,224,0.1); }
   .unlocated-row img{ width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0; cursor:pointer; }
   .unlocated-row span{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-
   #date-filter-row{ display:flex; align-items:center; gap:6px; }
   #date-filter-row input{ flex:1; font-size:11px; padding:6px 8px; color-scheme: dark; }
   #date-filter-row span{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--parchment-dim); opacity:0.6; }
@@ -207,49 +112,21 @@
   #date-filter-status{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.7; margin-top:8px; }
 
   .photo-pin{ width:28px; height:28px; }
-  .photo-pin-inner{
-    width:28px; height:28px; border-radius:50%;
-    background:var(--ink); border:2px solid var(--parchment);
-    display:flex; align-items:center; justify-content:center;
-    box-shadow:0 2px 5px rgba(0,0,0,0.45);
-  }
+  .photo-pin-inner{ width:28px; height:28px; border-radius:50%; background:var(--ink); border:2px solid var(--parchment); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.45); }
   .photo-pin.linked .photo-pin-inner{ border-color:var(--food); }
   .photo-pin-inner svg{ width:14px; height:14px; stroke:var(--parchment); }
-
   .photo-cluster{ overflow:visible; }
-  .photo-cluster-inner{
-    width:34px; height:34px; border-radius:50%;
-    background:var(--ink); border:2px solid var(--parchment);
-    display:flex; align-items:center; justify-content:center; position:relative;
-    box-shadow:0 2px 5px rgba(0,0,0,0.45);
-  }
+  .photo-cluster-inner{ width:34px; height:34px; border-radius:50%; background:var(--ink); border:2px solid var(--parchment); display:flex; align-items:center; justify-content:center; position:relative; box-shadow:0 2px 5px rgba(0,0,0,0.45); }
   .photo-cluster-inner svg{ width:15px; height:15px; stroke:var(--parchment); }
-  .photo-cluster-count{
-    position:absolute; top:-6px; right:-6px;
-    background:var(--food); color:var(--food-dark);
-    font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500;
-    min-width:16px; height:16px; border-radius:8px; padding:0 4px;
-    display:flex; align-items:center; justify-content:center;
-    border:1.5px solid var(--ink);
-  }
+  .photo-cluster-count{ position:absolute; top:-6px; right:-6px; background:var(--food); color:var(--food-dark); font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500; min-width:16px; height:16px; border-radius:8px; padding:0 4px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--ink); }
 
-  #photo-viewer{
-    position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75);
-    display:none; align-items:center; justify-content:center;
-  }
-  #photo-viewer.open{ display:flex; }
-  #photo-viewer-inner{
-    background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px;
-    width:420px; max-width:88vw; max-height:86vh; overflow-y:auto;
-    box-shadow:0 16px 40px rgba(0,0,0,0.5);
-  }
-  #photo-viewer-img{ width:100%; border-radius:8px; display:block; margin-bottom:12px; }
+  #photo-viewer, #attachment-viewer{ position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75); display:none; align-items:center; justify-content:center; }
+  #photo-viewer.open, #attachment-viewer.open{ display:flex; }
+  #photo-viewer-inner, #attachment-viewer-inner{ background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px; width:420px; max-width:88vw; max-height:86vh; overflow-y:auto; box-shadow:0 16px 40px rgba(0,0,0,0.5); }
+  #photo-viewer-img, #attachment-viewer-img{ width:100%; border-radius:8px; display:block; margin-bottom:12px; }
   #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:14px; }
-  #photo-link-select{
-    width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px;
-    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink);
-  }
-  #photo-viewer-actions{ display:flex; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--parchment-line); }
+  #photo-link-select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
+  #photo-viewer-actions, #attachment-viewer-actions{ display:flex; gap:10px; margin-top:18px; padding-top:14px; border-top:1px solid var(--parchment-line); justify-content:flex-end; }
   #linked-photos{ display:flex; gap:8px; flex-wrap:wrap; }
   #linked-photos img{ width:52px; height:52px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
 
@@ -258,72 +135,35 @@
   .checklist-item input[type=checkbox]{ width:16px; height:16px; accent-color:var(--ink); cursor:pointer; flex-shrink:0; }
   .checklist-item span{ flex:1; font-size:13.5px; color:var(--ink); }
   .checklist-item.done span{ text-decoration:line-through; opacity:0.5; }
-  .checklist-item button{
-    background:none; border:none; cursor:pointer; color:var(--ink-soft); opacity:0.4; font-size:14px; padding:2px 4px;
-  }
+  .checklist-item button{ background:none; border:none; cursor:pointer; color:var(--ink-soft); opacity:0.4; font-size:14px; padding:2px 4px; }
   .checklist-item button:hover{ opacity:1; }
   #checklist-add{ display:flex; gap:8px; margin-top:8px; }
-  #checklist-add input{
-    flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:13px;
-    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:7px 10px; color:var(--ink);
-  }
-  #checklist-add input:focus{ outline:none; border-color:var(--ink-soft); }
-
+  #checklist-add input{ flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:7px 10px; color:var(--ink); }
   #attachments-grid{ display:flex; flex-wrap:wrap; gap:8px; }
   .attachment-thumb{ position:relative; width:64px; height:64px; }
   .attachment-thumb img{ width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
-  .attachment-thumb button{
-    position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
-    background:var(--history); color:#fff; border:1.5px solid var(--parchment); font-size:11px; line-height:1;
-    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
-  }
-  #attachments-add{ margin-top:8px; }
+  .attachment-thumb button{ position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%; background:var(--history); color:#fff; border:1.5px solid var(--parchment); font-size:11px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0; }
   #save-first-note{ font-size:12.5px; color:var(--ink-soft); opacity:0.7; font-style:italic; }
 
-  #attachment-viewer{
-    position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75);
-    display:none; align-items:center; justify-content:center;
-  }
-  #attachment-viewer.open{ display:flex; }
-  #attachment-viewer-inner{
-    background:var(--parchment); border-radius:14px; padding:16px; max-width:88vw; max-height:86vh; overflow:auto;
-    box-shadow:0 16px 40px rgba(0,0,0,0.5);
-  }
-  #attachment-viewer-img{ max-width:80vw; max-height:74vh; display:block; border-radius:8px; }
-  #attachment-viewer-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
+  .owner-only{ display:none; }
+  body.is-owner .owner-only{ display:initial; }
+  body.is-owner button.owner-only, body.is-owner .pill-btn.owner-only{ display:inline-flex; }
+  body.is-owner div.owner-only, body.is-owner #checklist-add.owner-only{ display:flex; }
 
   @media (max-width: 700px){
     input, textarea, select{ font-size:16px !important; }
-
-    #header{
-      flex-direction:column; align-items:stretch; gap:8px; padding:12px;
-    }
+    #header{ flex-direction:column; align-items:stretch; gap:8px; padding:12px; }
     #brand{ justify-content:space-between; }
     #brand h1{ font-size:19px; }
     #header-right{ flex-wrap:wrap; width:100%; gap:6px; }
     .pill-btn{ padding:9px 12px; font-size:12px; touch-action:manipulation; }
-
     #hint{ top:auto; bottom:16px; left:50%; font-size:13px; padding:8px 14px; max-width:88vw; text-align:center; }
-
-    #sidebar{
-      top:auto; left:0; right:0; bottom:0; width:100%; max-height:55vh;
-      border-radius:16px 16px 0 0; transform:translateY(0); transition:transform 0.25s ease;
-    }
+    #sidebar{ top:auto; left:0; right:0; bottom:0; width:100%; max-height:55vh; border-radius:16px 16px 0 0; transform:translateY(0); transition:transform 0.25s ease; }
     #sidebar.hidden{ transform:translateY(100%); opacity:1; }
-
-    #photo-panel{
-      top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh;
-      border-radius:16px 16px 0 0; overflow-y:auto;
-    }
-
-    #drawer{
-      top:auto; right:0; left:0; bottom:0; width:100%; max-height:88vh;
-      border-radius:16px 16px 0 0; transform:translateY(100%);
-    }
+    #photo-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
+    #drawer{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:88vh; border-radius:16px 16px 0 0; transform:translateY(100%); }
     #drawer.open{ transform:translateY(0); }
-
     #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
-
     .checklist-item input[type=checkbox]{ width:20px; height:20px; }
     .attachment-thumb, .attachment-thumb img{ width:72px; height:72px; }
     .unlocated-row img{ width:38px; height:38px; }
@@ -345,25 +185,26 @@
       <span id="count">0 waypoints</span>
     </div>
     <div id="header-right">
+      <button class="pill-btn" id="btn-signin">Sign in</button>
       <button class="pill-btn" id="btn-photos">Photos</button>
       <button class="pill-btn" id="toggle-all-routes">All routes</button>
       <button class="pill-btn" id="toggle-seamarks">Sea marks</button>
       <button class="pill-btn" id="toggle-sidebar">List</button>
       <button class="pill-btn" id="btn-export">Export backup</button>
-      <button class="pill-btn" id="btn-import">Import backup</button>
+      <button class="pill-btn owner-only" id="btn-import">Import backup</button>
       <input type="file" id="import-file" accept=".json" style="display:none">
-      <button class="pill-btn" id="btn-new">+ Add waypoint</button>
+      <button class="pill-btn owner-only" id="btn-new">+ Add waypoint</button>
     </div>
   </div>
 
-  <div id="hint">Click the map, or use + Add waypoint to type coordinates</div>
+  <div id="hint">Loading the shared map…</div>
 
   <div id="photo-panel">
     <h2>Photos from Google Drive</h2>
-    <div class="field-label">Drive folder link or ID</div>
-    <input id="f-folder-id" type="text" placeholder="Paste your Cairn photos folder link">
+    <div class="field-label owner-only">Drive folder link or ID</div>
+    <input class="owner-only" id="f-folder-id" type="text" placeholder="Paste your Cairn photos folder link">
     <div id="photo-status">Not connected yet.</div>
-    <div id="photo-panel-actions">
+    <div id="photo-panel-actions" class="owner-only">
       <button class="btn" id="btn-save-folder">Save folder</button>
       <button class="btn primary" id="btn-check-photos">Check for new photos</button>
     </div>
@@ -386,11 +227,11 @@
     <div id="photo-viewer-inner">
       <img id="photo-viewer-img">
       <div id="photo-viewer-name"></div>
-      <div class="field-label">Link to waypoint</div>
-      <select id="photo-link-select"></select>
+      <div class="field-label owner-only">Link to waypoint</div>
+      <select class="owner-only" id="photo-link-select"></select>
       <div id="photo-viewer-actions">
         <button class="btn" id="photo-viewer-close">Close</button>
-        <button class="btn danger" id="photo-remove">Remove photo</button>
+        <button class="btn danger owner-only" id="photo-remove">Remove photo</button>
       </div>
     </div>
   </div>
@@ -400,7 +241,7 @@
       <img id="attachment-viewer-img">
       <div id="attachment-viewer-actions">
         <button class="btn" id="attachment-viewer-close">Close</button>
-        <button class="btn danger" id="attachment-remove">Remove</button>
+        <button class="btn danger owner-only" id="attachment-remove">Remove</button>
       </div>
     </div>
   </div>
@@ -425,11 +266,11 @@
       <div id="coord-sub">Paste straight from Google Maps: latitude, longitude</div>
       <div class="field-label">Notes</div>
       <textarea id="f-notes" placeholder="What's the plan? Route ideas, best season, who to bring, where to stay…"></textarea>
-      <div class="field-label">GPX route</div>
+      <div class="field-label owner-only">GPX route</div>
       <div id="gpx-box">
         <input type="file" id="gpx-file" accept=".gpx" style="display:none">
-        <button class="btn small" id="btn-gpx-upload">Upload GPX</button>
-        <button class="btn small" id="btn-gpx-remove" style="display:none">Remove route</button>
+        <button class="btn small owner-only" id="btn-gpx-upload">Upload GPX</button>
+        <button class="btn small owner-only" id="btn-gpx-remove" style="display:none">Remove route</button>
         <span id="gpx-status">No route attached</span>
       </div>
       <div class="field-label" id="linked-photos-label" style="display:none">Linked photos</div>
@@ -437,22 +278,22 @@
       <div id="richer-content" style="display:none">
         <div class="field-label">Checklist</div>
         <div id="checklist-list"></div>
-        <div id="checklist-add">
+        <div id="checklist-add" class="owner-only">
           <input id="checklist-input" type="text" placeholder="Add an item and press Enter">
           <button class="btn small" id="btn-checklist-add">Add</button>
         </div>
         <div class="field-label">Photos & scanned pages</div>
         <div id="attachments-grid"></div>
-        <div id="attachments-add">
+        <div id="attachments-add" class="owner-only">
           <input type="file" id="attachment-file" accept="image/*" multiple style="display:none">
           <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
         </div>
       </div>
       <div id="save-first-note" style="display:none">Save this waypoint to add a checklist or photos.</div>
       <div id="drawer-actions">
-        <button class="btn danger" id="btn-delete">Delete</button>
-        <button class="btn" id="btn-cancel">Cancel</button>
-        <button class="btn primary" id="btn-save">Save</button>
+        <button class="btn danger owner-only" id="btn-delete">Delete</button>
+        <button class="btn" id="btn-cancel">Close</button>
+        <button class="btn primary owner-only" id="btn-save">Save</button>
       </div>
       <div id="save-hint"></div>
     </div>
@@ -474,8 +315,17 @@ const CATEGORIES = {
 
 const UK_IRELAND_BOUNDS = L.latLngBounds([49.0, -11.5], [61.0, 2.0]);
 
+const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
+const DRIVE_API_KEY = 'AIzaSyDcxsbE66fTwSM5YAmWizMa10y64aChHbg';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive.readonly https://www.googleapis.com/auth/drive.file';
+const APP_FOLDER_NAME = 'Cairn App Data';
+const DATA_FILE_NAME = 'cairn-data.json';
+let DATA_FILE_ID = localStorage.getItem('cairn:dataFileId') || '';
+
 let trips = [];
+let photos = [];
 let markers = {};
+let photoMarkers = {};
 let activeFilters = new Set(Object.keys(CATEGORIES));
 let currentId = null;
 let pendingId = null;
@@ -484,80 +334,220 @@ let pendingGpxAction = null;
 let pendingGpxText = null;
 let routeLayer = null;
 let allRoutesOn = false;
-const allRoutesLayer = L.layerGroup();
 let saveTimer = null;
 let seamarksOn = false;
-
-function storageGet(key){
-  try{
-    const v = localStorage.getItem('cairn:' + key);
-    return v === null ? null : { value: v };
-  }catch(e){ return null; }
-}
-function storageSet(key, value){
-  localStorage.setItem('cairn:' + key, value);
-}
-function storageDelete(key){
-  localStorage.removeItem('cairn:' + key);
-}
-
-const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
-const DRIVE_SCOPE = 'https://www.googleapis.com/auth/drive.readonly';
+let driveFolderId = '';
+let isOwner = false;
 let driveTokenClient = null;
 let driveAccessToken = null;
-let driveFolderId = storageGet('driveFolderId') ? storageGet('driveFolderId').value : '';
-let photos = [];
-try{
-  const p = storageGet('photos');
-  photos = p && p.value ? JSON.parse(p.value) : [];
-}catch(e){ photos = []; }
-let photoMarkers = {};
+let appFolderId = localStorage.getItem('cairn:appFolderId') || '';
+let saveCloudTimer = null;
 
-function openPhotoDb(){
-  return new Promise((resolve,reject)=>{
-    const req = indexedDB.open('cairnPhotoDb', 1);
-    req.onupgradeneeded = ()=>{ req.result.createObjectStore('photos'); };
-    req.onsuccess = ()=> resolve(req.result);
-    req.onerror = ()=> reject(req.error);
-  });
-}
-async function idbPut(id, blob){
-  const db = await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction('photos','readwrite');
-    tx.objectStore('photos').put(blob, id);
-    tx.oncomplete = ()=> resolve();
-    tx.onerror = ()=> reject(tx.error);
-  });
-}
-async function idbGet(id){
-  const db = await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction('photos','readonly');
-    const req = tx.objectStore('photos').get(id);
-    req.onsuccess = ()=> resolve(req.result);
-    req.onerror = ()=> reject(req.error);
-  });
-}
-async function idbDelete(id){
-  const db = await openPhotoDb();
-  return new Promise((resolve,reject)=>{
-    const tx = db.transaction('photos','readwrite');
-    tx.objectStore('photos').delete(id);
-    tx.oncomplete = ()=> resolve();
-    tx.onerror = ()=> reject(tx.error);
-  });
-}
-function persistPhotos(){ storageSet('photos', JSON.stringify(photos)); }
-
-function extractFolderId(input){
-  const trimmed = input.trim();
-  const match = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
-  if(match) return match[1];
-  return trimmed;
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
 }
 
-function setPhotoStatus(text){ document.getElementById('photo-status').textContent = text; }
+function publicFileUrl(fileId){
+  return `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${DRIVE_API_KEY}`;
+}
+
+/* ---------- Drive helpers ---------- */
+
+function initDriveAuth(){
+  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: ()=>{},
+  });
+}
+
+function requestDriveToken(){
+  return new Promise((resolve, reject)=>{
+    if(!driveTokenClient){ reject(new Error('Google auth not ready yet')); return; }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      driveAccessToken = resp.access_token;
+      resolve(driveAccessToken);
+    };
+    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
+  });
+}
+
+async function driveListFolder(folderId, token){
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and mimeType contains 'image/'`);
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=200`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if(!res.ok) throw new Error('list failed ' + res.status);
+  const data = await res.json();
+  return data.files || [];
+}
+
+async function driveDownloadFile(fileId, token){
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
+  if(!res.ok) throw new Error('download failed ' + res.status);
+  return await res.blob();
+}
+
+async function driveFindFile(query){
+  const q = encodeURIComponent(query);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  });
+  if(!res.ok) throw new Error('search failed ' + res.status);
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+
+async function driveSetPublic(fileId){
+  try{
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ role:'reader', type:'anyone' }),
+    });
+  }catch(e){}
+}
+
+async function driveCreateFile(blob, filename, parentId, mimeType){
+  const metadata = { name: filename };
+  if(parentId) metadata.parents = [parentId];
+  const boundary = '-------cairnBoundary' + Date.now();
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+  const metaPart = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata);
+  const mediaPartHeader = delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
+  const bodyBlob = new Blob([metaPart, mediaPartHeader, blob, closeDelim]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: bodyBlob,
+  });
+  if(!res.ok) throw new Error('create failed ' + res.status);
+  const data = await res.json();
+  return data.id;
+}
+
+async function driveUpdateFileContent(fileId, blob, mimeType){
+  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method:'PATCH',
+    headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type': mimeType },
+    body: blob,
+  });
+  if(!res.ok) throw new Error('update failed ' + res.status);
+  return await res.json();
+}
+
+async function ensureAppFolder(){
+  if(appFolderId) return appFolderId;
+  let folder = await driveFindFile(`name='${APP_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(!folder){
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: APP_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }),
+    });
+    const data = await res.json();
+    folder = { id: data.id };
+    await driveSetPublic(folder.id);
+  }
+  appFolderId = folder.id;
+  localStorage.setItem('cairn:appFolderId', appFolderId);
+  return appFolderId;
+}
+
+async function bootstrapSharedStorage(){
+  setPhotoStatus('Setting up shared storage…');
+  try{
+    const folderId = await ensureAppFolder();
+    let file = await driveFindFile(`name='${DATA_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
+    let fileId;
+    if(file){
+      fileId = file.id;
+    } else {
+      const blob = new Blob([JSON.stringify({ trips:[], photos:[], photosFolderId:'' })], { type:'application/json' });
+      fileId = await driveCreateFile(blob, DATA_FILE_NAME, folderId, 'application/json');
+      await driveSetPublic(fileId);
+    }
+    DATA_FILE_ID = fileId;
+    localStorage.setItem('cairn:dataFileId', fileId);
+    setPhotoStatus(`Shared storage ready. Data file ID: ${fileId}`);
+    window.prompt('Shared storage is set up. Copy this Data File ID and send it to Claude so it can be baked permanently into the app:', fileId);
+    await loadCloudData();
+    applyFilters();
+    renderList();
+    loadPhotoMarkers();
+  }catch(e){
+    setPhotoStatus('Setup failed: ' + e.message);
+  }
+}
+
+/* ---------- Shared cloud data ---------- */
+
+async function loadCloudData(){
+  if(!DATA_FILE_ID){
+    document.getElementById('hint').textContent = 'No shared data yet — sign in to set up shared storage.';
+    return;
+  }
+  try{
+    const res = await fetch(publicFileUrl(DATA_FILE_ID));
+    if(!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    trips = data.trips || [];
+    photos = data.photos || [];
+    driveFolderId = data.photosFolderId || '';
+    document.getElementById('f-folder-id').value = driveFolderId;
+    document.getElementById('hint').textContent = 'Click the map, or use + Add waypoint to type coordinates';
+  }catch(e){
+    trips = []; photos = [];
+    document.getElementById('hint').textContent = "Couldn't load the shared map right now.";
+  }
+}
+
+function scheduleCloudSave(){
+  clearTimeout(saveCloudTimer);
+  saveCloudTimer = setTimeout(doCloudSave, 700);
+}
+
+async function doCloudSave(){
+  if(!isOwner || !DATA_FILE_ID) return;
+  const hint = document.getElementById('save-hint');
+  try{
+    const blob = new Blob([JSON.stringify({ trips, photos, photosFolderId: driveFolderId })], { type:'application/json' });
+    await driveUpdateFileContent(DATA_FILE_ID, blob, 'application/json');
+    hint.textContent = 'saved';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
+  }catch(e){
+    hint.textContent = 'could not save';
+  }
+}
+
+/* ---------- Owner sign-in ---------- */
+
+function applyOwnerUI(){
+  document.body.classList.toggle('is-owner', isOwner);
+  document.getElementById('btn-signin').textContent = isOwner ? 'Signed in ✓' : 'Sign in';
+  document.getElementById('btn-signin').classList.toggle('owner', isOwner);
+}
+
+document.getElementById('btn-signin').onclick = async ()=>{
+  if(isOwner) return;
+  try{
+    await requestDriveToken();
+    isOwner = true;
+    applyOwnerUI();
+    if(!DATA_FILE_ID){
+      if(confirm('No shared storage found yet. Set it up now?')) await bootstrapSharedStorage();
+    }
+  }catch(e){
+    alert("Couldn't sign in — make sure you're using the Google account this app was set up with.");
+  }
+};
+
+/* ---------- Map setup ---------- */
 
 const map = L.map('map', {
   zoomControl: window.matchMedia('(max-width: 700px)').matches ? false : true,
@@ -594,6 +584,8 @@ document.getElementById('toggle-seamarks').onclick = (e)=>{
   else{ map.removeLayer(seamarksLayer); e.target.classList.remove('active'); }
 };
 
+/* ---------- Waypoint markers ---------- */
+
 function cairnSvg(color, dimmed){
   return `<svg width="30" height="34" viewBox="0 0 30 34" class="${dimmed?'dimmed':''}">
     <ellipse cx="15" cy="30" rx="10" ry="3" fill="${color}" opacity="0.92"/>
@@ -602,7 +594,6 @@ function cairnSvg(color, dimmed){
     <ellipse cx="15" cy="8.2" rx="3.6" ry="2" fill="${color}"/>
   </svg>`;
 }
-
 function makeIcon(cat, dimmed){
   const c = CATEGORIES[cat] ? CATEGORIES[cat].color : '#0d5f7a';
   return L.divIcon({ className:'cairn-icon', html: cairnSvg(c, dimmed), iconSize:[30,34], iconAnchor:[15,32] });
@@ -614,66 +605,17 @@ function cameraSvg(){
     <circle cx="12" cy="13" r="4"/>
   </svg>`;
 }
-
 function makePhotoIcon(linked){
-  return L.divIcon({
-    className:'photo-pin' + (linked ? ' linked' : ''),
-    html:`<div class="photo-pin-inner">${cameraSvg()}</div>`,
-    iconSize:[28,28],
-    iconAnchor:[14,14],
-  });
+  return L.divIcon({ className:'photo-pin' + (linked ? ' linked' : ''), html:`<div class="photo-pin-inner">${cameraSvg()}</div>`, iconSize:[28,28], iconAnchor:[14,14] });
 }
-
 const photoClusterGroup = L.markerClusterGroup({
   maxClusterRadius: 55,
   spiderfyOnMaxZoom: true,
   showCoverageOnHover: false,
   iconCreateFunction: function(cluster){
-    return L.divIcon({
-      className:'photo-cluster',
-      html:`<div class="photo-cluster-inner">${cameraSvg()}<span class="photo-cluster-count">${cluster.getChildCount()}</span></div>`,
-      iconSize:[34,34],
-      iconAnchor:[17,17],
-    });
+    return L.divIcon({ className:'photo-cluster', html:`<div class="photo-cluster-inner">${cameraSvg()}<span class="photo-cluster-count">${cluster.getChildCount()}</span></div>`, iconSize:[34,34], iconAnchor:[17,17] });
   },
 }).addTo(map);
-
-function dmsToDecimal(dms, ref){
-  if(!dms || dms.length < 3) return null;
-  let dec = dms[0] + dms[1]/60 + dms[2]/3600;
-  if(ref === 'S' || ref === 'W') dec = -dec;
-  return dec;
-}
-
-function parseExifDate(str){
-  if(!str) return null;
-  const m = str.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
-  if(!m) return null;
-  const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
-  return isNaN(d.getTime()) ? null : d.getTime();
-}
-
-function extractPhotoMeta(blob){
-  return new Promise((resolve)=>{
-    if(typeof EXIF === 'undefined'){ resolve({ lat:null, lng:null, takenAt:null }); return; }
-    try{
-      EXIF.getData(blob, function(){
-        const latDms = EXIF.getTag(this, 'GPSLatitude');
-        const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
-        const lngDms = EXIF.getTag(this, 'GPSLongitude');
-        const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
-        const lat = latDms ? dmsToDecimal(latDms, latRef) : null;
-        const lng = lngDms ? dmsToDecimal(lngDms, lngRef) : null;
-        const takenAt = parseExifDate(EXIF.getTag(this, 'DateTimeOriginal') || EXIF.getTag(this, 'DateTime'));
-        resolve({
-          lat: Number.isFinite(lat) ? lat : null,
-          lng: Number.isFinite(lng) ? lng : null,
-          takenAt,
-        });
-      });
-    }catch(e){ resolve({ lat:null, lng:null, takenAt:null }); }
-  });
-}
 
 function buildFilters(){
   const el = document.getElementById('filters');
@@ -690,7 +632,6 @@ function buildFilters(){
     el.appendChild(chip);
   });
 }
-
 function buildCatSelect(){
   const el = document.getElementById('cat-select');
   el.innerHTML='';
@@ -700,16 +641,14 @@ function buildCatSelect(){
     b.dataset.key = key;
     b.textContent = c.label;
     b.style.background = c.color;
-    b.onclick = ()=> selectCategory(key);
+    b.onclick = ()=>{ if(isOwner) selectCategory(key); };
     el.appendChild(b);
   });
 }
-
 function selectCategory(key){
   document.querySelectorAll('.cat-opt').forEach(o=> o.classList.toggle('active', o.dataset.key===key));
   document.getElementById('cat-select').dataset.selected = key;
 }
-
 function applyFilters(){
   Object.entries(markers).forEach(([id,m])=>{
     const trip = trips.find(t=>t.id===id);
@@ -720,13 +659,12 @@ function applyFilters(){
   });
   renderList();
 }
-
 function renderList(){
   const list = document.getElementById('trip-list');
   document.getElementById('count').textContent = `${trips.length} waypoint${trips.length===1?'':'s'}`;
   const visible = trips.filter(t=>activeFilters.has(t.category)).sort((a,b)=>b.created-a.created);
   if(trips.length===0){
-    list.innerHTML = '<div id="empty-list">No cairns placed yet. Click the map or use + Add waypoint.</div>';
+    list.innerHTML = '<div id="empty-list">No cairns placed yet.</div>';
     return;
   }
   if(visible.length===0){
@@ -739,50 +677,42 @@ function renderList(){
     row.className='trip-row';
     const c = CATEGORIES[t.category];
     row.innerHTML = `<div class="t-title">${escapeHtml(t.title||'Untitled')}</div>
-      <div class="t-meta"><span class="dot" style="background:${c.color}"></span>${c.label}${t.hasGpx?' · route attached':''}</div>`;
+      <div class="t-meta"><span class="dot" style="background:${c.color}"></span>${c.label}${t.gpxFileId?' · route attached':''}</div>`;
     row.onclick = ()=>{
       map.flyTo([t.lat,t.lng], Math.max(map.getZoom(),9), {duration:0.6});
       openDrawer(t.id, false);
-      if(t.hasGpx) showRoute(t);
+      if(t.gpxFileId) showRoute(t);
     };
     list.appendChild(row);
   });
 }
-
-function escapeHtml(s){
-  const d = document.createElement('div');
-  d.textContent = s;
-  return d.innerHTML;
-}
-
 function addMarker(trip){
   const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category) }).addTo(map);
-  m.on('click', ()=>{ openDrawer(trip.id, false); if(trip.hasGpx) showRoute(trip); });
+  m.on('click', ()=>{ openDrawer(trip.id, false); if(trip.gpxFileId) showRoute(trip); });
   markers[trip.id] = m;
 }
 
-function resetGpxState(){
-  pendingGpxAction = null;
-  pendingGpxText = null;
-  document.getElementById('gpx-file').value = '';
-}
+/* ---------- Drawer ---------- */
 
-function refreshGpxUi(hasGpx){
-  const status = document.getElementById('gpx-status');
-  const removeBtn = document.getElementById('btn-gpx-remove');
-  if(pendingGpxAction==='add'){ status.textContent = 'New route ready to save'; removeBtn.style.display='inline-block'; }
-  else if(pendingGpxAction==='remove'){ status.textContent = 'Route will be removed on save'; removeBtn.style.display='none'; }
-  else if(hasGpx){ status.textContent = 'Route attached'; removeBtn.style.display='inline-block'; }
-  else{ status.textContent = 'No route attached'; removeBtn.style.display='none'; }
+function hideHint(){ const h = document.getElementById('hint'); if(h) h.style.opacity='0'; }
+
+function setDrawerOwnerState(){
+  const ro = !isOwner;
+  document.getElementById('f-title').disabled = ro;
+  document.getElementById('f-coords').disabled = ro;
+  document.getElementById('f-notes').disabled = ro;
 }
 
 function openDrawer(id, isNew, latlng){
   currentId = isNew ? null : id;
   isNewPin = isNew;
-  resetGpxState();
+  pendingGpxAction = null;
+  pendingGpxText = null;
+  document.getElementById('gpx-file').value = '';
   const drawer = document.getElementById('drawer');
-  const del = document.getElementById('btn-delete');
+  setDrawerOwnerState();
   if(isNew){
+    if(!isOwner) return;
     pendingId = 'w' + Date.now();
     const center = latlng || map.getCenter();
     document.getElementById('f-title').value = '';
@@ -790,7 +720,6 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('f-coords').value = `${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
     document.getElementById('f-coords').classList.remove('invalid');
     selectCategory('hike');
-    del.style.display = 'none';
     refreshGpxUi(false);
     document.getElementById('linked-photos').innerHTML = '';
     document.getElementById('linked-photos-label').style.display = 'none';
@@ -804,8 +733,7 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('f-coords').value = `${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`;
     document.getElementById('f-coords').classList.remove('invalid');
     selectCategory(t.category);
-    del.style.display = 'inline-block';
-    refreshGpxUi(t.hasGpx);
+    refreshGpxUi(!!t.gpxFileId);
     renderLinkedPhotos(t.id);
     document.getElementById('richer-content').style.display = 'block';
     document.getElementById('save-first-note').style.display = 'none';
@@ -819,203 +747,93 @@ function openDrawer(id, isNew, latlng){
   setTimeout(()=>document.getElementById('f-title').focus(), 200);
   hideHint();
 }
-
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   currentId = null; pendingId = null; isNewPin = false;
-  resetGpxState();
+  pendingGpxAction = null; pendingGpxText = null;
   clearRoute();
 }
 
-function hideHint(){ const h = document.getElementById('hint'); if(h) h.style.opacity='0'; }
+/* ---------- GPX ---------- */
 
+function refreshGpxUi(hasGpx){
+  const status = document.getElementById('gpx-status');
+  const removeBtn = document.getElementById('btn-gpx-remove');
+  if(pendingGpxAction==='add'){ status.textContent = 'New route ready to save'; removeBtn.style.display='inline-block'; }
+  else if(pendingGpxAction==='remove'){ status.textContent = 'Route will be removed on save'; removeBtn.style.display='none'; }
+  else if(hasGpx){ status.textContent = 'Route attached'; removeBtn.style.display='inline-block'; }
+  else{ status.textContent = 'No route attached'; removeBtn.style.display='none'; }
+}
 function parseGpxText(text){
   const doc = new DOMParser().parseFromString(text, 'application/xml');
   if(doc.querySelector('parsererror')) return [];
   let pts = Array.from(doc.querySelectorAll('trkpt, rtept'));
   if(pts.length===0) pts = Array.from(doc.querySelectorAll('wpt'));
-  return pts.map(p=>[parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))])
-            .filter(c=>Number.isFinite(c[0]) && Number.isFinite(c[1]));
+  return pts.map(p=>[parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))]).filter(c=>Number.isFinite(c[0]) && Number.isFinite(c[1]));
 }
-
 function clearRoute(){ if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; } }
-
-function loadAllRoutes(){
-  allRoutesLayer.clearLayers();
-  let combined = null;
-  trips.filter(t=>t.hasGpx).forEach(t=>{
-    const res = storageGet('gpx:' + t.id);
-    if(!res || !res.value) return;
-    const coords = parseGpxText(res.value);
-    if(coords.length < 2) return;
-    const line = L.polyline(coords, { color: CATEGORIES[t.category].color, weight:3.5, opacity:0.8 });
-    line.addTo(allRoutesLayer);
-    combined = combined ? combined.extend(line.getBounds()) : L.latLngBounds(line.getBounds());
-  });
-  if(!map.hasLayer(allRoutesLayer)) allRoutesLayer.addTo(map);
-  if(combined) map.fitBounds(combined, { padding:[70,70] });
-}
-
-function refreshAllRoutesIfOn(){ if(allRoutesOn) loadAllRoutes(); }
-
-document.getElementById('toggle-all-routes').onclick = (e)=>{
-  allRoutesOn = !allRoutesOn;
-  if(allRoutesOn){
-    clearRoute();
-    loadAllRoutes();
-    e.target.classList.add('active');
-  } else {
-    allRoutesLayer.clearLayers();
-    map.removeLayer(allRoutesLayer);
-    e.target.classList.remove('active');
-  }
-};
-
 async function showRoute(trip){
   clearRoute();
-  if(!trip.hasGpx) return;
+  if(!trip.gpxFileId) return;
   try{
-    const res = storageGet('gpx:' + trip.id);
-    if(!res || !res.value) return;
-    const coords = parseGpxText(res.value);
+    const res = await fetch(publicFileUrl(trip.gpxFileId));
+    if(!res.ok) return;
+    const text = await res.text();
+    const coords = parseGpxText(text);
     if(coords.length < 2) return;
     routeLayer = L.polyline(coords, { color: CATEGORIES[trip.category].color, weight:4, opacity:0.85 }).addTo(map);
     map.fitBounds(routeLayer.getBounds(), { padding:[70,70] });
   }catch(e){}
 }
+document.getElementById('btn-gpx-upload').onclick = ()=> document.getElementById('gpx-file').click();
+document.getElementById('gpx-file').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const coords = parseGpxText(reader.result);
+    if(coords.length < 2){ document.getElementById('gpx-status').textContent = "Couldn't read points from that file"; return; }
+    pendingGpxAction = 'add';
+    pendingGpxText = reader.result;
+    refreshGpxUi(true);
+  };
+  reader.readAsText(file);
+};
+document.getElementById('btn-gpx-remove').onclick = ()=>{
+  pendingGpxAction = 'remove';
+  pendingGpxText = null;
+  refreshGpxUi(false);
+};
 
-function initDriveAuth(){
-  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
-  driveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: DRIVE_CLIENT_ID,
-    scope: DRIVE_SCOPE,
-    callback: ()=>{},
-  });
-}
+/* ---------- All routes ---------- */
 
-function ensureDriveToken(){
-  return new Promise((resolve, reject)=>{
-    if(!driveTokenClient){ reject(new Error('Google auth not ready yet')); return; }
-    driveTokenClient.callback = (resp)=>{
-      if(resp.error){ reject(new Error(resp.error)); return; }
-      driveAccessToken = resp.access_token;
-      resolve(driveAccessToken);
-    };
-    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
-  });
-}
-
-async function driveListFolder(folderId, token){
-  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and mimeType contains 'image/'`);
-  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=200`;
-  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
-  if(!res.ok) throw new Error('list failed ' + res.status);
-  const data = await res.json();
-  return data.files || [];
-}
-
-async function driveDownloadFile(fileId, token){
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
-  if(!res.ok) throw new Error('download failed ' + res.status);
-  return await res.blob();
-}
-
-function addPhotoMarker(photo){
-  const m = L.marker([photo.lat, photo.lng], { icon: makePhotoIcon(!!photo.linkedTripId) });
-  m.on('click', ()=> openPhotoViewer(photo.id));
-  photoClusterGroup.addLayer(m);
-  photoMarkers[photo.id] = m;
-}
-
-function renderUnlocatedList(){
-  const box = document.getElementById('unlocated-list');
-  const unlocated = photos.filter(p=>!p.lat || !p.lng);
-  if(unlocated.length === 0){ box.innerHTML=''; return; }
-  box.innerHTML = `<div class="field-label" style="margin-top:14px;">No location data (${unlocated.length})</div>`;
-  unlocated.forEach(async p=>{
-    const blob = await idbGet(p.id);
-    const row = document.createElement('div');
-    row.className = 'unlocated-row';
-    const url = blob ? URL.createObjectURL(blob) : '';
-    row.innerHTML = `<img src="${url}"><span>${escapeHtml(p.name)}</span>`;
-    row.onclick = ()=> openPhotoViewer(p.id);
-    box.appendChild(row);
-  });
-}
-
-async function checkForNewPhotos(){
-  if(!driveFolderId){ setPhotoStatus('Paste your folder link above first.'); return; }
-  setPhotoStatus('Connecting to Google Drive…');
-  try{
-    const token = await ensureDriveToken();
-    setPhotoStatus('Checking for new photos…');
-    const files = await driveListFolder(driveFolderId, token);
-    const existingIds = new Set(photos.map(p=>p.id));
-    const newFiles = files.filter(f=>!existingIds.has(f.id));
-    for(const f of newFiles){
-      const blob = await driveDownloadFile(f.id, token);
-      const meta = await extractPhotoMeta(blob);
-      await idbPut(f.id, blob);
-      const photo = { id:f.id, name:f.name, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
-      photos.push(photo);
-      if(photo.lat && photo.lng) addPhotoMarker(photo);
-    }
-    persistPhotos();
-    renderUnlocatedList();
-    applyPhotoDateFilter();
-    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now.`);
-  }catch(e){
-    setPhotoStatus("Couldn't reach Google Drive. Try Save folder again, or reconnect.");
+const allRoutesLayer = L.layerGroup();
+async function loadAllRoutes(){
+  allRoutesLayer.clearLayers();
+  let combined = null;
+  for(const t of trips.filter(t=>t.gpxFileId)){
+    try{
+      const res = await fetch(publicFileUrl(t.gpxFileId));
+      if(!res.ok) continue;
+      const text = await res.text();
+      const coords = parseGpxText(text);
+      if(coords.length < 2) continue;
+      const line = L.polyline(coords, { color: CATEGORIES[t.category].color, weight:3.5, opacity:0.8 });
+      line.addTo(allRoutesLayer);
+      combined = combined ? combined.extend(line.getBounds()) : L.latLngBounds(line.getBounds());
+    }catch(e){}
   }
+  if(!map.hasLayer(allRoutesLayer)) allRoutesLayer.addTo(map);
+  if(combined) map.fitBounds(combined, { padding:[70,70] });
 }
-
-function populateLinkSelect(currentLinkedId){
-  const sel = document.getElementById('photo-link-select');
-  sel.innerHTML = '<option value="">Not linked</option>' + trips.map(t=>
-    `<option value="${t.id}"${t.id===currentLinkedId?' selected':''}>${escapeHtml(t.title)}</option>`
-  ).join('');
-}
-
-let viewerPhotoId = null;
-async function openPhotoViewer(id){
-  const p = photos.find(ph=>ph.id===id);
-  if(!p) return;
-  viewerPhotoId = id;
-  const blob = await idbGet(id);
-  document.getElementById('photo-viewer-img').src = blob ? URL.createObjectURL(blob) : '';
-  document.getElementById('photo-viewer-name').textContent = p.name;
-  populateLinkSelect(p.linkedTripId);
-  document.getElementById('photo-viewer').classList.add('open');
-}
-
-document.getElementById('photo-viewer-close').onclick = ()=>{
-  document.getElementById('photo-viewer').classList.remove('open');
-  viewerPhotoId = null;
+function refreshAllRoutesIfOn(){ if(allRoutesOn) loadAllRoutes(); }
+document.getElementById('toggle-all-routes').onclick = (e)=>{
+  allRoutesOn = !allRoutesOn;
+  if(allRoutesOn){ clearRoute(); loadAllRoutes(); e.target.classList.add('active'); }
+  else{ allRoutesLayer.clearLayers(); map.removeLayer(allRoutesLayer); e.target.classList.remove('active'); }
 };
 
-document.getElementById('photo-link-select').onchange = (e)=>{
-  const p = photos.find(ph=>ph.id===viewerPhotoId);
-  if(!p) return;
-  p.linkedTripId = e.target.value || null;
-  persistPhotos();
-  if(photoMarkers[p.id]){
-    photoMarkers[p.id].setIcon(makePhotoIcon(!!p.linkedTripId));
-  }
-  if(currentId) renderLinkedPhotos(currentId);
-};
-
-document.getElementById('photo-remove').onclick = async ()=>{
-  if(!viewerPhotoId) return;
-  if(!confirm('Remove this photo from Cairn? (It stays in your Google Drive.)')) return;
-  photos = photos.filter(p=>p.id!==viewerPhotoId);
-  if(photoMarkers[viewerPhotoId]){ photoClusterGroup.removeLayer(photoMarkers[viewerPhotoId]); delete photoMarkers[viewerPhotoId]; }
-  await idbDelete(viewerPhotoId);
-  persistPhotos();
-  renderUnlocatedList();
-  if(currentId) renderLinkedPhotos(currentId);
-  document.getElementById('photo-viewer').classList.remove('open');
-  viewerPhotoId = null;
-};
+/* ---------- Checklist & attachments ---------- */
 
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
 
@@ -1025,88 +843,84 @@ function renderChecklist(trip){
   (trip.checklist || []).forEach(item=>{
     const row = document.createElement('div');
     row.className = 'checklist-item' + (item.done ? ' done' : '');
-    row.innerHTML = `<input type="checkbox" ${item.done?'checked':''}><span>${escapeHtml(item.text)}</span><button aria-label="Remove">✕</button>`;
+    row.innerHTML = `<input type="checkbox" ${item.done?'checked':''} ${isOwner?'':'disabled'}><span>${escapeHtml(item.text)}</span><button aria-label="Remove" style="${isOwner?'':'display:none'}">✕</button>`;
     row.querySelector('input').onchange = (e)=>{
+      if(!isOwner) return;
       item.done = e.target.checked;
-      storageSet('trips', JSON.stringify(trips));
+      scheduleCloudSave();
       row.classList.toggle('done', item.done);
     };
     row.querySelector('button').onclick = ()=>{
       trip.checklist = trip.checklist.filter(i=>i.id!==item.id);
-      storageSet('trips', JSON.stringify(trips));
+      scheduleCloudSave();
       renderChecklist(trip);
     };
     box.appendChild(row);
   });
 }
-
 function addChecklistItem(trip){
   const input = document.getElementById('checklist-input');
   const text = input.value.trim();
   if(!text) return;
   trip.checklist = trip.checklist || [];
   trip.checklist.push({ id:genId(), text, done:false });
-  storageSet('trips', JSON.stringify(trips));
+  scheduleCloudSave();
   input.value = '';
   renderChecklist(trip);
 }
-
-async function renderAttachments(trip){
+function renderAttachments(trip){
   const grid = document.getElementById('attachments-grid');
   grid.innerHTML = '';
-  for(const att of (trip.attachments || [])){
-    const blob = await idbGet(att.id);
+  (trip.attachments || []).forEach(att=>{
     const wrap = document.createElement('div');
     wrap.className = 'attachment-thumb';
     const img = document.createElement('img');
-    img.src = blob ? URL.createObjectURL(blob) : '';
+    img.src = publicFileUrl(att.id);
     img.onclick = ()=> openAttachmentViewer(trip, att.id);
-    const del = document.createElement('button');
-    del.textContent = '✕';
-    del.setAttribute('aria-label','Remove');
-    del.onclick = (e)=>{ e.stopPropagation(); removeAttachment(trip, att.id); };
     wrap.appendChild(img);
-    wrap.appendChild(del);
+    if(isOwner){
+      const del = document.createElement('button');
+      del.textContent = '✕';
+      del.setAttribute('aria-label','Remove');
+      del.onclick = (e)=>{ e.stopPropagation(); removeAttachment(trip, att.id); };
+      wrap.appendChild(del);
+    }
     grid.appendChild(wrap);
-  }
+  });
 }
-
 async function addAttachmentFiles(trip, files){
   trip.attachments = trip.attachments || [];
+  const folderId = await ensureAppFolder();
   for(const file of files){
-    const id = 'att_' + genId();
-    await idbPut(id, file);
-    trip.attachments.push({ id, name:file.name });
+    try{
+      const id = await driveCreateFile(file, file.name, folderId, file.type || 'image/jpeg');
+      trip.attachments.push({ id, name:file.name });
+    }catch(e){}
   }
-  storageSet('trips', JSON.stringify(trips));
+  scheduleCloudSave();
   renderAttachments(trip);
 }
-
-async function removeAttachment(trip, id){
+function removeAttachment(trip, id){
   trip.attachments = (trip.attachments || []).filter(a=>a.id!==id);
-  await idbDelete(id);
-  storageSet('trips', JSON.stringify(trips));
+  scheduleCloudSave();
   renderAttachments(trip);
 }
-
 let viewerAttachment = null;
-async function openAttachmentViewer(trip, id){
+function openAttachmentViewer(trip, id){
   viewerAttachment = { trip, id };
-  const blob = await idbGet(id);
-  document.getElementById('attachment-viewer-img').src = blob ? URL.createObjectURL(blob) : '';
+  document.getElementById('attachment-viewer-img').src = publicFileUrl(id);
   document.getElementById('attachment-viewer').classList.add('open');
 }
 document.getElementById('attachment-viewer-close').onclick = ()=>{
   document.getElementById('attachment-viewer').classList.remove('open');
   viewerAttachment = null;
 };
-document.getElementById('attachment-remove').onclick = async ()=>{
+document.getElementById('attachment-remove').onclick = ()=>{
   if(!viewerAttachment) return;
-  await removeAttachment(viewerAttachment.trip, viewerAttachment.id);
+  removeAttachment(viewerAttachment.trip, viewerAttachment.id);
   document.getElementById('attachment-viewer').classList.remove('open');
   viewerAttachment = null;
 };
-
 document.getElementById('btn-checklist-add').onclick = ()=>{
   const t = trips.find(tr=>tr.id===currentId);
   if(t) addChecklistItem(t);
@@ -1124,29 +938,145 @@ document.getElementById('attachment-file').onchange = (e)=>{
   e.target.value = '';
 };
 
+/* ---------- Photos from Drive folder ---------- */
+
+function dmsToDecimal(dms, ref){
+  if(!dms || dms.length < 3) return null;
+  let dec = dms[0] + dms[1]/60 + dms[2]/3600;
+  if(ref === 'S' || ref === 'W') dec = -dec;
+  return dec;
+}
+function parseExifDate(str){
+  if(!str) return null;
+  const m = str.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+function extractPhotoMeta(blob){
+  return new Promise((resolve)=>{
+    if(typeof EXIF === 'undefined'){ resolve({ lat:null, lng:null, takenAt:null }); return; }
+    try{
+      EXIF.getData(blob, function(){
+        const latDms = EXIF.getTag(this, 'GPSLatitude');
+        const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
+        const lngDms = EXIF.getTag(this, 'GPSLongitude');
+        const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
+        const lat = latDms ? dmsToDecimal(latDms, latRef) : null;
+        const lng = lngDms ? dmsToDecimal(lngDms, lngRef) : null;
+        const takenAt = parseExifDate(EXIF.getTag(this, 'DateTimeOriginal') || EXIF.getTag(this, 'DateTime'));
+        resolve({ lat: Number.isFinite(lat)?lat:null, lng: Number.isFinite(lng)?lng:null, takenAt });
+      });
+    }catch(e){ resolve({ lat:null, lng:null, takenAt:null }); }
+  });
+}
+function extractFolderId(input){
+  const trimmed = input.trim();
+  const match = trimmed.match(/folders\/([a-zA-Z0-9_-]+)/);
+  return match ? match[1] : trimmed;
+}
+function setPhotoStatus(text){ document.getElementById('photo-status').textContent = text; }
+
+function addPhotoMarker(photo){
+  const m = L.marker([photo.lat, photo.lng], { icon: makePhotoIcon(!!photo.linkedTripId) });
+  m.on('click', ()=> openPhotoViewer(photo.id));
+  photoClusterGroup.addLayer(m);
+  photoMarkers[photo.id] = m;
+}
+function renderUnlocatedList(){
+  const box = document.getElementById('unlocated-list');
+  const unlocated = photos.filter(p=>!p.lat || !p.lng);
+  if(unlocated.length === 0){ box.innerHTML=''; return; }
+  box.innerHTML = `<div class="field-label" style="margin-top:14px;">No location data (${unlocated.length})</div>`;
+  unlocated.forEach(p=>{
+    const row = document.createElement('div');
+    row.className = 'unlocated-row';
+    row.innerHTML = `<img src="${publicFileUrl(p.id)}"><span>${escapeHtml(p.name)}</span>`;
+    row.onclick = ()=> openPhotoViewer(p.id);
+    box.appendChild(row);
+  });
+}
+async function checkForNewPhotos(){
+  if(!driveFolderId){ setPhotoStatus('Paste your folder link above first.'); return; }
+  setPhotoStatus('Connecting to Google Drive…');
+  try{
+    const token = await requestDriveToken();
+    setPhotoStatus('Checking for new photos…');
+    const files = await driveListFolder(driveFolderId, token);
+    const existingIds = new Set(photos.map(p=>p.id));
+    const newFiles = files.filter(f=>!existingIds.has(f.id));
+    for(const f of newFiles){
+      const blob = await driveDownloadFile(f.id, token);
+      const meta = await extractPhotoMeta(blob);
+      const photo = { id:f.id, name:f.name, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
+      photos.push(photo);
+      if(photo.lat && photo.lng) addPhotoMarker(photo);
+    }
+    scheduleCloudSave();
+    renderUnlocatedList();
+    applyPhotoDateFilter();
+    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now.`);
+  }catch(e){
+    setPhotoStatus("Couldn't reach Google Drive. Try again, or reconnect.");
+  }
+}
+function populateLinkSelect(currentLinkedId){
+  const sel = document.getElementById('photo-link-select');
+  sel.innerHTML = '<option value="">Not linked</option>' + trips.map(t=>
+    `<option value="${t.id}"${t.id===currentLinkedId?' selected':''}>${escapeHtml(t.title)}</option>`
+  ).join('');
+}
+let viewerPhotoId = null;
+function openPhotoViewer(id){
+  const p = photos.find(ph=>ph.id===id);
+  if(!p) return;
+  viewerPhotoId = id;
+  document.getElementById('photo-viewer-img').src = publicFileUrl(id);
+  document.getElementById('photo-viewer-name').textContent = p.name;
+  populateLinkSelect(p.linkedTripId);
+  document.getElementById('photo-viewer').classList.add('open');
+}
+document.getElementById('photo-viewer-close').onclick = ()=>{
+  document.getElementById('photo-viewer').classList.remove('open');
+  viewerPhotoId = null;
+};
+document.getElementById('photo-link-select').onchange = (e)=>{
+  const p = photos.find(ph=>ph.id===viewerPhotoId);
+  if(!p) return;
+  p.linkedTripId = e.target.value || null;
+  scheduleCloudSave();
+  if(photoMarkers[p.id]) photoMarkers[p.id].setIcon(makePhotoIcon(!!p.linkedTripId));
+  if(currentId) renderLinkedPhotos(currentId);
+};
+document.getElementById('photo-remove').onclick = ()=>{
+  if(!viewerPhotoId) return;
+  if(!confirm('Remove this photo from Cairn? (It stays in your Google Drive.)')) return;
+  photos = photos.filter(p=>p.id!==viewerPhotoId);
+  if(photoMarkers[viewerPhotoId]){ photoClusterGroup.removeLayer(photoMarkers[viewerPhotoId]); delete photoMarkers[viewerPhotoId]; }
+  scheduleCloudSave();
+  renderUnlocatedList();
+  if(currentId) renderLinkedPhotos(currentId);
+  document.getElementById('photo-viewer').classList.remove('open');
+  viewerPhotoId = null;
+};
 function renderLinkedPhotos(tripId){
   const box = document.getElementById('linked-photos');
   const label = document.getElementById('linked-photos-label');
   const linked = photos.filter(p=>p.linkedTripId===tripId);
   box.innerHTML = '';
   label.style.display = linked.length ? 'block' : 'none';
-  linked.forEach(async p=>{
-    const blob = await idbGet(p.id);
+  linked.forEach(p=>{
     const img = document.createElement('img');
-    img.src = blob ? URL.createObjectURL(blob) : '';
+    img.src = publicFileUrl(p.id);
     img.onclick = ()=> openPhotoViewer(p.id);
     box.appendChild(img);
   });
 }
-
-async function loadPhotoMarkers(){
-  for(const p of photos){
-    if(p.lat && p.lng) await addPhotoMarker(p);
-  }
+function loadPhotoMarkers(){
+  photos.forEach(p=>{ if(p.lat && p.lng) addPhotoMarker(p); });
   renderUnlocatedList();
   applyPhotoDateFilter();
 }
-
 function applyPhotoDateFilter(){
   const fromVal = document.getElementById('photo-date-from').value;
   const toVal = document.getElementById('photo-date-to').value;
@@ -1169,10 +1099,8 @@ function applyPhotoDateFilter(){
   if(!fromVal && !toVal) status.textContent = `Showing all ${total} located photos.`;
   else status.textContent = `Showing ${shown} of ${total} located photos.`;
 }
-
 document.getElementById('photo-date-from').addEventListener('change', applyPhotoDateFilter);
 document.getElementById('photo-date-to').addEventListener('change', applyPhotoDateFilter);
-
 document.querySelectorAll('#date-filter-presets button').forEach(btn=>{
   btn.onclick = ()=>{
     const range = btn.dataset.range;
@@ -1192,79 +1120,28 @@ document.querySelectorAll('#date-filter-presets button').forEach(btn=>{
     applyPhotoDateFilter();
   };
 });
-
 document.getElementById('btn-photos').onclick = ()=>{
   document.getElementById('photo-panel').classList.toggle('open');
 };
-
 document.getElementById('btn-save-folder').onclick = ()=>{
   const raw = document.getElementById('f-folder-id').value;
   if(!raw.trim()){ setPhotoStatus('Paste a folder link or ID first.'); return; }
   driveFolderId = extractFolderId(raw);
-  storageSet('driveFolderId', driveFolderId);
+  scheduleCloudSave();
   setPhotoStatus('Folder saved. Click "Check for new photos" to connect.');
 };
-
 document.getElementById('btn-check-photos').onclick = checkForNewPhotos;
 
-if(driveFolderId) document.getElementById('f-folder-id').value = driveFolderId;
-
-document.getElementById('btn-gpx-upload').onclick = ()=> document.getElementById('gpx-file').click();
-
-document.getElementById('gpx-file').onchange = (e)=>{
-  const file = e.target.files[0];
-  if(!file) return;
-  const reader = new FileReader();
-  reader.onload = ()=>{
-    const coords = parseGpxText(reader.result);
-    if(coords.length < 2){
-      document.getElementById('gpx-status').textContent = "Couldn't read points from that file";
-      return;
-    }
-    pendingGpxAction = 'add';
-    pendingGpxText = reader.result;
-    refreshGpxUi(true);
-  };
-  reader.readAsText(file);
-};
-
-document.getElementById('btn-gpx-remove').onclick = ()=>{
-  pendingGpxAction = 'remove';
-  pendingGpxText = null;
-  refreshGpxUi(false);
-};
-
-async function loadTrips(){
-  try{
-    const res = storageGet('trips');
-    trips = res && res.value ? JSON.parse(res.value) : [];
-  }catch(e){ trips = []; }
-  trips.forEach(addMarker);
-  if(trips.length>0) hideHint();
-  applyFilters();
-  renderList();
-}
-
-async function persist(){
-  try{
-    storageSet('trips', JSON.stringify(trips));
-    const hint = document.getElementById('save-hint');
-    hint.textContent = 'saved';
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
-  }catch(e){
-    document.getElementById('save-hint').textContent = 'could not save';
-  }
-}
+/* ---------- Save / delete waypoint ---------- */
 
 document.getElementById('btn-save').onclick = async ()=>{
+  if(!isOwner) return;
   const title = document.getElementById('f-title').value.trim() || 'Untitled';
   const notes = document.getElementById('f-notes').value;
   const category = document.getElementById('cat-select').dataset.selected || 'hike';
   const coordsField = document.getElementById('f-coords');
   const parts = coordsField.value.split(',').map(s=>parseFloat(s.trim()));
   const [lat, lng] = parts;
-
   if(parts.length !== 2 || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180){
     coordsField.classList.add('invalid');
     document.getElementById('save-hint').textContent = 'paste coordinates as: latitude, longitude';
@@ -1272,13 +1149,18 @@ document.getElementById('btn-save').onclick = async ()=>{
   }
   coordsField.classList.remove('invalid');
 
-  let hasGpx = false;
+  const folderId = await ensureAppFolder();
+
   if(isNewPin){
-    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), hasGpx:false, checklist:[], attachments:[] };
+    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), gpxFileId:null, checklist:[], attachments:[] };
     trips.push(trip);
     addMarker(trip);
     if(pendingGpxAction==='add'){
-      try{ storageSet('gpx:' + pendingId, pendingGpxText); trip.hasGpx = true; }catch(e){}
+      try{
+        const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
+        trip.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml');
+        await driveSetPublic(trip.gpxFileId);
+      }catch(e){}
     }
   } else {
     const t = trips.find(tr=>tr.id===currentId);
@@ -1286,14 +1168,17 @@ document.getElementById('btn-save').onclick = async ()=>{
     markers[currentId].setLatLng([lat,lng]);
     markers[currentId].setIcon(makeIcon(category));
     if(pendingGpxAction==='add'){
-      try{ storageSet('gpx:' + currentId, pendingGpxText); t.hasGpx = true; }catch(e){}
+      try{
+        const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
+        if(t.gpxFileId){ await driveUpdateFileContent(t.gpxFileId, blob, 'application/gpx+xml'); }
+        else{ t.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml'); await driveSetPublic(t.gpxFileId); }
+      }catch(e){}
     } else if(pendingGpxAction==='remove'){
-      try{ storageDelete('gpx:' + currentId); }catch(e){}
-      t.hasGpx = false;
+      t.gpxFileId = null;
     }
   }
 
-  await persist();
+  scheduleCloudSave();
   applyFilters();
   renderList();
   refreshAllRoutesIfOn();
@@ -1303,14 +1188,12 @@ document.getElementById('btn-save').onclick = async ()=>{
 document.getElementById('btn-cancel').onclick = ()=> closeDrawer();
 document.getElementById('drawer-close').onclick = ()=> closeDrawer();
 
-document.getElementById('btn-delete').onclick = async ()=>{
-  if(!currentId) return;
+document.getElementById('btn-delete').onclick = ()=>{
+  if(!currentId || !isOwner) return;
   if(!confirm('Delete this cairn? This cannot be undone.')) return;
-  const t = trips.find(tr=>tr.id===currentId);
   trips = trips.filter(tr=>tr.id!==currentId);
   if(markers[currentId]){ map.removeLayer(markers[currentId]); delete markers[currentId]; }
-  if(t && t.hasGpx){ try{ storageDelete('gpx:' + currentId); }catch(e){} }
-  await persist();
+  scheduleCloudSave();
   renderList();
   refreshAllRoutesIfOn();
   closeDrawer();
@@ -1319,44 +1202,30 @@ document.getElementById('btn-delete').onclick = async ()=>{
 document.getElementById('toggle-sidebar').onclick = ()=>{
   document.getElementById('sidebar').classList.toggle('hidden');
 };
-
 document.getElementById('btn-new').onclick = ()=>{
+  if(!isOwner) return;
   if(document.getElementById('drawer').classList.contains('open')) return;
   openDrawer(null, true);
 };
-
 map.on('click', (e)=>{
+  if(!isOwner) return;
   if(document.getElementById('drawer').classList.contains('open')) return;
   openDrawer(null, true, e.latlng);
 });
 
-document.getElementById('btn-export').onclick = async ()=>{
-  const bundle = { trips, gpx:{}, attachments:{} };
-  for(const t of trips){
-    if(t.hasGpx){
-      const g = storageGet('gpx:' + t.id);
-      if(g) bundle.gpx[t.id] = g.value;
-    }
-    for(const att of (t.attachments || [])){
-      const blob = await idbGet(att.id);
-      if(!blob) continue;
-      bundle.attachments[att.id] = await new Promise(res=>{
-        const r = new FileReader();
-        r.onload = ()=> res(r.result);
-        r.readAsDataURL(blob);
-      });
-    }
-  }
+/* ---------- Backup export / import ---------- */
+
+document.getElementById('btn-export').onclick = ()=>{
+  const bundle = { trips, photos, photosFolderId: driveFolderId };
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
   a.download = 'cairn-backup-' + new Date().toISOString().slice(0,10) + '.json';
   a.click();
 };
-
 document.getElementById('btn-import').onclick = ()=> document.getElementById('import-file').click();
-
 document.getElementById('import-file').onchange = (e)=>{
+  if(!isOwner) return;
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
@@ -1364,23 +1233,32 @@ document.getElementById('import-file').onchange = (e)=>{
     try{
       const bundle = JSON.parse(reader.result);
       if(!Array.isArray(bundle.trips)) throw new Error('bad file');
-      if(!confirm(`Import ${bundle.trips.length} waypoint(s)? This adds to what you already have.`)) return;
+      if(!confirm(`Import ${bundle.trips.length} waypoint(s)? This adds to what's already shared.`)) return;
+      const folderId = await ensureAppFolder();
       for(const t of bundle.trips){
         if(trips.some(existing=>existing.id===t.id)) t.id = 'w' + Date.now() + Math.random().toString(36).slice(2,6);
+        t.checklist = t.checklist || [];
+        t.attachments = t.attachments || [];
+        if(t.hasGpx && bundle.gpx && bundle.gpx[t.id]){
+          try{
+            const blob = new Blob([bundle.gpx[t.id]], { type:'application/gpx+xml' });
+            t.gpxFileId = await driveCreateFile(blob, (t.title||'route') + '.gpx', folderId, 'application/gpx+xml');
+            await driveSetPublic(t.gpxFileId);
+          }catch(err){}
+        }
         trips.push(t);
         addMarker(t);
-        if(t.hasGpx && bundle.gpx && bundle.gpx[t.id]) storageSet('gpx:' + t.id, bundle.gpx[t.id]);
-        for(const att of (t.attachments || [])){
-          if(bundle.attachments && bundle.attachments[att.id]){
-            const r = await fetch(bundle.attachments[att.id]);
-            const blob = await r.blob();
-            await idbPut(att.id, blob);
-          }
-        }
       }
-      storageSet('trips', JSON.stringify(trips));
+      (bundle.photos || []).forEach(p=>{
+        if(!photos.some(existing=>existing.id===p.id)){
+          photos.push(p);
+          if(p.lat && p.lng) addPhotoMarker(p);
+        }
+      });
+      scheduleCloudSave();
       applyFilters();
       renderList();
+      renderUnlocatedList();
       hideHint();
     }catch(err){
       alert("Couldn't read that backup file.");
@@ -1390,11 +1268,21 @@ document.getElementById('import-file').onchange = (e)=>{
   e.target.value = '';
 };
 
-buildFilters();
-buildCatSelect();
-loadTrips();
-loadPhotoMarkers();
-initDriveAuth();
+/* ---------- Boot ---------- */
+
+async function boot(){
+  buildFilters();
+  buildCatSelect();
+  applyOwnerUI();
+  await loadCloudData();
+  trips.forEach(addMarker);
+  if(trips.length>0) hideHint();
+  applyFilters();
+  renderList();
+  loadPhotoMarkers();
+  initDriveAuth();
+}
+boot();
 </script>
 </body>
 </html>
