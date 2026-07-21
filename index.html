@@ -208,10 +208,10 @@
   .checklist-item button:hover{ opacity:1; }
   #checklist-add{ display:flex; gap:8px; margin-top:8px; }
   #checklist-add input{ flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:7px 10px; color:var(--ink); }
-  #attachments-grid{ display:flex; flex-wrap:wrap; gap:8px; }
-  .attachment-thumb{ position:relative; width:64px; height:64px; }
-  .attachment-thumb img{ width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
-  .video-thumb{ width:64px; height:64px; border-radius:8px; background:var(--ink); color:var(--parchment); display:flex; align-items:center; justify-content:center; font-size:20px; cursor:pointer; border:1px solid var(--parchment-line); }
+  #attachments-grid{ display:flex; flex-wrap:wrap; gap:10px; }
+  .attachment-thumb{ position:relative; width:110px; height:110px; }
+  .attachment-thumb img{ width:110px; height:110px; border-radius:10px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); box-shadow:0 2px 6px rgba(0,0,0,0.15); }
+  .video-thumb{ width:110px; height:110px; border-radius:10px; background:var(--ink); color:var(--parchment); display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer; border:1px solid var(--parchment-line); }
 
   #gallery-screen{
     position:absolute; inset:0; z-index:1250; background:var(--ink); color:var(--parchment);
@@ -275,7 +275,6 @@
     #drawer.open{ transform:translateY(0); }
     #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
     .checklist-item input[type=checkbox]{ width:20px; height:20px; }
-    .attachment-thumb, .attachment-thumb img, .video-thumb{ width:72px; height:72px; }
     .unlocated-row img{ width:38px; height:38px; }
   }
 </style>
@@ -301,7 +300,6 @@
       <button class="pill-btn" id="btn-gallery">Gallery</button>
       <button class="pill-btn" id="btn-photos">Photos</button>
       <button class="pill-btn" id="toggle-all-routes">All routes</button>
-      <button class="pill-btn" id="toggle-seamarks">Sea marks</button>
       <button class="pill-btn" id="toggle-bathymetry">Depths</button>
       <button class="pill-btn" id="toggle-weather">Weather</button>
       <button class="pill-btn" id="toggle-sidebar">List</button>
@@ -327,12 +325,8 @@
     </div>
     <div id="weather-panel-status">Not loaded yet.</div>
     <button class="btn small primary" id="btn-load-weather-grid">Scan the map</button>
-    <div id="weather-legend">
-      <span><i class="wdot weather-good"></i> Good</span>
-      <span><i class="wdot weather-ok"></i> Marginal</span>
-      <span><i class="wdot weather-poor"></i> Poor</span>
-    </div>
-    <div id="weather-panel-note">Combined = calm & dry. Wind and Rain show that measurement on its own. Data only goes 6 days out.</div>
+    <div id="weather-legend"></div>
+    <div id="weather-panel-note">Wind and Rain show that measurement's own intensity scale. Combined shows calm-&amp;-dry suitability. Wind in mph, rain as % chance. Data only goes 6 days out.</div>
   </div>
 
   <div id="photo-panel">
@@ -437,6 +431,14 @@
       <div class="field-label">Trip / group (optional)</div>
       <input id="f-group" type="text" list="group-suggestions" placeholder="e.g. Skye 2027">
       <datalist id="group-suggestions"></datalist>
+      <div id="attachments-section" style="display:none">
+        <div class="field-label">Photos & scanned pages</div>
+        <div id="attachments-grid"></div>
+        <div id="attachments-add" class="editor-only">
+          <input type="file" id="attachment-file" accept="image/*,video/*" multiple style="display:none">
+          <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
+        </div>
+      </div>
       <div class="field-label">Notes</div>
       <textarea id="f-notes" placeholder="What's the plan? Route ideas, best season, who to bring, where to stay…"></textarea>
       <div class="field-label editor-only">GPX route</div>
@@ -449,11 +451,13 @@
       <div class="field-label" id="elevation-label" style="display:none">Elevation profile</div>
       <div id="elevation-chart"></div>
       <div id="elevation-stats"></div>
-      <div class="field-label">Tides</div>
-      <div id="tide-controls">
-        <button class="btn small" id="btn-check-tides">Check tide times</button>
+      <div id="tides-section">
+        <div class="field-label">Tides</div>
+        <div id="tide-controls">
+          <button class="btn small" id="btn-check-tides">Check tide times</button>
+        </div>
+        <div id="tide-info"></div>
       </div>
-      <div id="tide-info"></div>
       <div class="field-label">Weather this week</div>
       <div id="weather-detail"></div>
       <div class="field-label" id="linked-photos-label" style="display:none">Linked photos</div>
@@ -464,12 +468,6 @@
         <div id="checklist-add" class="editor-only">
           <input id="checklist-input" type="text" placeholder="Add an item and press Enter">
           <button class="btn small" id="btn-checklist-add">Add</button>
-        </div>
-        <div class="field-label">Photos & scanned pages</div>
-        <div id="attachments-grid"></div>
-        <div id="attachments-add" class="editor-only">
-          <input type="file" id="attachment-file" accept="image/*,video/*" multiple style="display:none">
-          <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
         </div>
       </div>
       <div id="save-first-note" style="display:none">Save this waypoint to add a checklist or photos.</div>
@@ -522,7 +520,6 @@ let pendingGpxText = null;
 let routeLayer = null;
 let allRoutesOn = false;
 let saveTimer = null;
-let seamarksOn = false;
 let driveFolderId = '';
 let isOwner = false;
 let driveTokenClient = null;
@@ -789,24 +786,13 @@ function lockToUkIreland(){
 lockToUkIreland();
 map.on('resize', lockToUkIreland);
 
-const seamarksLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
-  attribution: '© OpenSeaMap contributors',
-  maxZoom: 18,
-});
-
-document.getElementById('toggle-seamarks').onclick = (e)=>{
-  seamarksOn = !seamarksOn;
-  if(seamarksOn){ seamarksLayer.addTo(map); e.target.classList.add('active'); }
-  else{ map.removeLayer(seamarksLayer); e.target.classList.remove('active'); }
-};
-
 const bathymetryLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
-  layers: 'emodnet:mean_multicolour',
+  layers: 'contours',
   format: 'image/png',
   transparent: true,
   version: '1.1.1',
-  opacity: 0.6,
-  attribution: 'Bathymetry © EMODnet — for planning only, not for navigation',
+  opacity: 0.8,
+  attribution: 'Depth contours © EMODnet — for planning only, not for navigation',
 });
 let bathymetryOn = false;
 document.getElementById('toggle-bathymetry').onclick = (e)=>{
@@ -840,28 +826,51 @@ function buildWeatherGrid(){
 }
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
-function magnitudeScore(value, min, max){ return clamp01(1 - (value-min)/(max-min)); }
-function windScore(day){ return magnitudeScore(day.windGust, 0, 70); }
-function rainScore(day){ return magnitudeScore(day.rain, 0, 15); }
-function combinedScore(day){
+function interpolateStops(stops, t){
+  t = clamp01(t);
+  for(let i=0;i<stops.length-1;i++){
+    const [t0,c0] = stops[i], [t1,c1] = stops[i+1];
+    if(t >= t0 && t <= t1){
+      const f = (t-t0) / ((t1-t0) || 1);
+      return c0.map((v,idx)=> Math.round(v + (c1[idx]-v)*f));
+    }
+  }
+  return stops[stops.length-1][1];
+}
+// Wind: calm (blue) -> breezy (green) -> windy (yellow/orange) -> severe (red/magenta)
+const WIND_STOPS = [
+  [0,    [90,160,220]],
+  [0.35, [70,165,95]],
+  [0.62, [230,205,55]],
+  [0.82, [230,130,35]],
+  [1,    [185,30,105]],
+];
+// Rain chance: dry (near white) -> light blue -> deep blue/purple (very likely)
+const RAIN_STOPS = [
+  [0,    [238,242,240]],
+  [0.4,  [150,200,235]],
+  [0.7,  [60,125,205]],
+  [1,    [45,35,145]],
+];
+// Combined suitability: poor (vivid red) -> marginal (vivid yellow) -> good (vivid green)
+const COMBINED_STOPS = [
+  [0,   [205,35,55]],
+  [0.5, [235,190,30]],
+  [1,   [30,150,70]],
+];
+
+function windFraction(day){ return clamp01(day.windGust / 45); }
+function rainFraction(day){ return clamp01(day.rain / 100); }
+function combinedGoodness(day){
   const c = WEATHER_CRITERIA.general;
   const w = clamp01(1 - Math.max(0, day.windGust - c.goodWind) / Math.max(1, c.okWind - c.goodWind));
   const r = clamp01(1 - Math.max(0, day.rain - c.goodRain) / Math.max(1, c.okRain - c.goodRain));
   return Math.min(w, r);
 }
-function scoreForLayer(day, mode){
-  if(mode === 'wind') return windScore(day);
-  if(mode === 'rain') return rainScore(day);
-  return combinedScore(day);
-}
-function scoreToRgb(score){
-  const stops = [[0,[178,58,58]],[0.5,[201,152,42]],[1,[47,125,50]]];
-  let lo = stops[0], hi = stops[stops.length-1];
-  for(let i=0;i<stops.length-1;i++){
-    if(score >= stops[i][0] && score <= stops[i+1][0]){ lo = stops[i]; hi = stops[i+1]; break; }
-  }
-  const t = (score - lo[0]) / ((hi[0]-lo[0]) || 1);
-  return lo[1].map((v,i)=> Math.round(v + (hi[1][i]-v) * t));
+function colorForLayer(day, mode){
+  if(mode === 'wind') return interpolateStops(WIND_STOPS, windFraction(day));
+  if(mode === 'rain') return interpolateStops(RAIN_STOPS, rainFraction(day));
+  return interpolateStops(COMBINED_STOPS, combinedGoodness(day));
 }
 
 function renderWeatherGrid(){
@@ -877,19 +886,18 @@ function renderWeatherGrid(){
       const gridIdx = r*WEATHER_GRID_COLS + c;
       const days = weatherGridRaw[gridIdx];
       const day = days && days[selectedDayIndex];
-      const score = day ? scoreForLayer(day, weatherLayerMode) : 0.5;
-      const [rr,gg,bb] = scoreToRgb(score);
+      const [rr,gg,bb] = day ? colorForLayer(day, weatherLayerMode) : [180,180,180];
       const pxRow = WEATHER_GRID_ROWS - 1 - r; // flip so north is at the top of the image
       const pi = (pxRow*WEATHER_GRID_COLS + c) * 4;
-      imgData.data[pi] = rr; imgData.data[pi+1] = gg; imgData.data[pi+2] = bb; imgData.data[pi+3] = 190;
+      imgData.data[pi] = rr; imgData.data[pi+1] = gg; imgData.data[pi+2] = bb; imgData.data[pi+3] = 210;
     }
   }
   ctx.putImageData(imgData, 0, 0);
-  weatherImageOverlay = L.imageOverlay(canvas.toDataURL(), UK_IRELAND_BOUNDS, { opacity:0.55, interactive:false });
+  weatherImageOverlay = L.imageOverlay(canvas.toDataURL(), UK_IRELAND_BOUNDS, { opacity:0.62, interactive:false });
   if(weatherPanelOn){
     weatherImageOverlay.addTo(map);
     const el = weatherImageOverlay.getElement();
-    if(el){ el.style.filter = 'blur(9px)'; el.style.imageRendering = 'auto'; }
+    if(el){ el.style.filter = 'blur(7px) saturate(1.25)'; el.style.imageRendering = 'auto'; }
   }
 }
 
@@ -923,13 +931,25 @@ document.getElementById('toggle-weather').onclick = (e)=>{
   else if(weatherImageOverlay){ map.removeLayer(weatherImageOverlay); weatherImageOverlay = null; }
 };
 document.getElementById('btn-load-weather-grid').onclick = loadWeatherGrid;
+function renderWeatherLegend(){
+  const el = document.getElementById('weather-legend');
+  if(weatherLayerMode === 'wind'){
+    el.innerHTML = '<span><i class="wdot" style="background:rgb(90,160,220)"></i> Calm</span><span><i class="wdot" style="background:rgb(230,205,55)"></i> Breezy</span><span><i class="wdot" style="background:rgb(185,30,105)"></i> Severe</span>';
+  } else if(weatherLayerMode === 'rain'){
+    el.innerHTML = '<span><i class="wdot" style="background:rgb(238,242,240);border:1px solid rgba(255,255,255,0.4)"></i> Dry</span><span><i class="wdot" style="background:rgb(60,125,205)"></i> Likely</span><span><i class="wdot" style="background:rgb(45,35,145)"></i> Very likely</span>';
+  } else {
+    el.innerHTML = '<span><i class="wdot weather-good"></i> Good</span><span><i class="wdot weather-ok"></i> Marginal</span><span><i class="wdot weather-poor"></i> Poor</span>';
+  }
+}
 document.querySelectorAll('#weather-layer-toggle button').forEach(btn=>{
   btn.onclick = ()=>{
     weatherLayerMode = btn.dataset.layer;
     document.querySelectorAll('#weather-layer-toggle button').forEach(b=> b.classList.toggle('active', b===btn));
+    renderWeatherLegend();
     if(weatherGridRaw) renderWeatherGrid();
   };
 });
+renderWeatherLegend();
 document.getElementById('weather-day-slider').addEventListener('input', (e)=>{
   selectedDayIndex = parseInt(e.target.value, 10) || 0;
   updateDayLabel();
@@ -1026,11 +1046,11 @@ document.getElementById('btn-check-tides').onclick = ()=>{
 
 // Thresholds are in km/h (wind gust) and mm (daily rain total).
 const WEATHER_CRITERIA = {
-  sea:     { goodWind:24, okWind:36, goodRain:2,  okRain:6,  label:'Sea' },
-  hike:    { goodWind:48, okWind:72, goodRain:2,  okRain:6,  label:'Hike' },
-  walk:    { goodWind:56, okWind:80, goodRain:4,  okRain:10, label:'Walk' },
-  places:  { goodWind:72, okWind:97, goodRain:10, okRain:20, label:'Places to see' },
-  general: { goodWind:48, okWind:72, goodRain:3,  okRain:8,  label:'General' },
+  sea:     { goodWind:15, okWind:22, goodRain:20, okRain:50, label:'Sea' },
+  hike:    { goodWind:30, okWind:45, goodRain:20, okRain:50, label:'Hike' },
+  walk:    { goodWind:35, okWind:50, goodRain:30, okRain:60, label:'Walk' },
+  places:  { goodWind:45, okWind:60, goodRain:50, okRain:80, label:'Places to see' },
+  general: { goodWind:30, okWind:45, goodRain:25, okRain:55, label:'General' },
 };
 
 function rateDay(day, cat){
@@ -1061,7 +1081,7 @@ async function fetchDailyWeather(points){
   if(points.length === 0) return [];
   const lats = points.map(p=>p.lat.toFixed(4)).join(',');
   const lngs = points.map(p=>p.lng.toFixed(4)).join(',');
-  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&daily=precipitation_sum,windgusts_10m_max&timezone=auto&forecast_days=7`;
+  const url = `https://api.open-meteo.com/v1/forecast?latitude=${lats}&longitude=${lngs}&daily=precipitation_probability_max,windgusts_10m_max&timezone=auto&forecast_days=7`;
   const res = await fetch(url);
   if(!res.ok) throw new Error('weather fetch failed: ' + res.status);
   const data = await res.json();
@@ -1071,8 +1091,8 @@ async function fetchDailyWeather(points){
     if(!d || !d.daily || !d.daily.time) return [];
     return d.daily.time.map((date,idx)=>({
       date,
-      rain: d.daily.precipitation_sum ? d.daily.precipitation_sum[idx] : 0,
-      windGust: d.daily.windgusts_10m_max ? d.daily.windgusts_10m_max[idx] : 0,
+      rain: d.daily.precipitation_probability_max ? d.daily.precipitation_probability_max[idx] : 0,
+      windGust: d.daily.windgusts_10m_max ? d.daily.windgusts_10m_max[idx] * 0.621371 : 0,
     }));
   });
 }
@@ -1100,9 +1120,9 @@ function renderWeatherDetail(trip){
     return `<div class="weather-day">
       <span class="weather-dot weather-${r}"></span>
       <span class="w-dow">${dow}</span>
-      <span class="w-detail">${Math.round(d.windGust)} km/h gust · ${d.rain.toFixed(1)}mm rain</span>
+      <span class="w-detail">${Math.round(d.windGust)} mph gust · ${Math.round(d.rain)}% rain chance</span>
     </div>`;
-  }).join('') + `<div id="weather-criteria-note">Rated for ${escapeHtml(c.label)} — good ≤ ${c.goodWind}km/h wind & ${c.goodRain}mm rain, ok ≤ ${c.okWind}km/h & ${c.okRain}mm.</div>`;
+  }).join('') + `<div id="weather-criteria-note">Rated for ${escapeHtml(c.label)} — good ≤ ${c.goodWind}mph wind & ${c.goodRain}% rain chance, ok ≤ ${c.okWind}mph & ${c.okRain}%.</div>`;
 }
 
 /* ---------- Waypoint markers ---------- */
@@ -1329,7 +1349,11 @@ function renderList(){
 }
 function addMarker(trip){
   const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category, false, weekendRatingFor(trip.id)) }).addTo(map);
-  m.on('click', ()=>{ openDrawer(trip.id, false); if(trip.gpxFileId) showRoute(trip); });
+  m.on('click', ()=>{
+    map.flyTo([trip.lat, trip.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
+    openDrawer(trip.id, false);
+    if(trip.gpxFileId) showRoute(trip);
+  });
   markers[trip.id] = m;
 }
 
@@ -1381,6 +1405,8 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('linked-photos').innerHTML = '';
     document.getElementById('linked-photos-label').style.display = 'none';
     document.getElementById('richer-content').style.display = 'none';
+    document.getElementById('attachments-section').style.display = 'none';
+    document.getElementById('tides-section').style.display = 'none';
     document.getElementById('save-first-note').style.display = 'block';
   } else {
     pendingId = id;
@@ -1397,6 +1423,8 @@ function openDrawer(id, isNew, latlng){
     renderLinkedPhotos(t.id);
     renderWeatherDetail(t);
     document.getElementById('richer-content').style.display = 'block';
+    document.getElementById('attachments-section').style.display = 'block';
+    document.getElementById('tides-section').style.display = (t.category === 'sea') ? 'block' : 'none';
     document.getElementById('save-first-note').style.display = 'none';
     t.checklist = t.checklist || [];
     t.attachments = t.attachments || [];
@@ -1694,6 +1722,7 @@ async function addAttachmentFiles(trip, files){
     try{
       const mimeType = file.type || 'image/jpeg';
       const id = await driveCreateFile(file, file.name, folderId, mimeType);
+      await driveSetPublic(id);
       trip.attachments.push({ id, name:file.name, mimeType, addedAt:Date.now() });
     }catch(e){}
   }
@@ -1817,7 +1846,8 @@ async function runPlaceSearch(query){
       const row = document.createElement('div');
       row.className = 'place-result';
       row.textContent = r.display_name;
-      row.onclick = ()=>{
+      row.addEventListener('mousedown', (ev)=>{
+        ev.preventDefault();
         document.getElementById('f-coords').value = `${parseFloat(r.lat).toFixed(6)}, ${parseFloat(r.lon).toFixed(6)}`;
         document.getElementById('f-coords').classList.remove('invalid');
         if(!document.getElementById('f-title').value.trim()){
@@ -1825,7 +1855,7 @@ async function runPlaceSearch(query){
         }
         document.getElementById('f-place-search').value = '';
         box.innerHTML = '';
-      };
+      });
       box.appendChild(row);
     });
   }catch(e){
@@ -2077,6 +2107,7 @@ function collectGalleryItems(){
     items.push({
       kind:'location', id:p.id, name:p.name, mimeType:p.mimeType,
       date: p.takenAt || p.importedAt, caption: trip ? trip.title : 'Unlinked',
+      lat: p.lat, lng: p.lng,
       openFn: ()=> openPhotoViewer(p.id),
     });
   });
@@ -2085,11 +2116,22 @@ function collectGalleryItems(){
       items.push({
         kind:'notes', id:a.id, name:a.name, mimeType:a.mimeType,
         date: a.addedAt || t.created, caption: t.title,
+        lat: t.lat, lng: t.lng,
         openFn: ()=> openAttachmentViewer(t, a.id),
       });
     });
   });
   return items.sort((a,b)=> (b.date||0) - (a.date||0));
+}
+
+function goToGalleryItem(item){
+  document.getElementById('gallery-screen').classList.remove('open');
+  if(item.lat && item.lng){
+    map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
+    setTimeout(()=> item.openFn(), 350);
+  } else {
+    item.openFn();
+  }
 }
 
 function renderGallery(){
@@ -2111,7 +2153,7 @@ function renderGallery(){
     } else {
       tile.innerHTML = `<img src="${publicFileUrl(item.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
     }
-    tile.onclick = item.openFn;
+    tile.onclick = ()=> goToGalleryItem(item);
     grid.appendChild(tile);
   });
 }
