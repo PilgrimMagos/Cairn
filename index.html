@@ -5,6 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cairn — a map of trips worth taking</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -197,13 +199,32 @@
   .unlocated-row img{ width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0; cursor:pointer; }
   .unlocated-row span{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-  .photo-marker{ width:36px; height:36px; border-radius:50%; overflow:visible; }
-  .photo-marker img{
-    width:36px; height:36px; border-radius:50%; object-fit:cover;
-    border:2.5px solid var(--parchment); box-shadow:0 2px 5px rgba(0,0,0,0.5);
-    display:block;
+  .photo-pin{ width:28px; height:28px; }
+  .photo-pin-inner{
+    width:28px; height:28px; border-radius:50%;
+    background:var(--ink); border:2px solid var(--parchment);
+    display:flex; align-items:center; justify-content:center;
+    box-shadow:0 2px 5px rgba(0,0,0,0.45);
   }
-  .photo-marker.linked img{ border-color:var(--amber, #d98a00); }
+  .photo-pin.linked .photo-pin-inner{ border-color:var(--food); }
+  .photo-pin-inner svg{ width:14px; height:14px; stroke:var(--parchment); }
+
+  .photo-cluster{ overflow:visible; }
+  .photo-cluster-inner{
+    width:34px; height:34px; border-radius:50%;
+    background:var(--ink); border:2px solid var(--parchment);
+    display:flex; align-items:center; justify-content:center; position:relative;
+    box-shadow:0 2px 5px rgba(0,0,0,0.45);
+  }
+  .photo-cluster-inner svg{ width:15px; height:15px; stroke:var(--parchment); }
+  .photo-cluster-count{
+    position:absolute; top:-6px; right:-6px;
+    background:var(--food); color:var(--food-dark);
+    font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500;
+    min-width:16px; height:16px; border-radius:8px; padding:0 4px;
+    display:flex; align-items:center; justify-content:center;
+    border:1.5px solid var(--ink);
+  }
 
   #photo-viewer{
     position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75);
@@ -320,6 +341,7 @@
 </div>
 
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
@@ -463,14 +485,35 @@ function makeIcon(cat, dimmed){
   return L.divIcon({ className:'cairn-icon', html: cairnSvg(c, dimmed), iconSize:[30,34], iconAnchor:[15,32] });
 }
 
-function makePhotoIcon(objectUrl, linked){
+function cameraSvg(){
+  return `<svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/>
+    <circle cx="12" cy="13" r="4"/>
+  </svg>`;
+}
+
+function makePhotoIcon(linked){
   return L.divIcon({
-    className:'photo-marker' + (linked ? ' linked' : ''),
-    html:`<img src="${objectUrl}">`,
-    iconSize:[36,36],
-    iconAnchor:[18,18],
+    className:'photo-pin' + (linked ? ' linked' : ''),
+    html:`<div class="photo-pin-inner">${cameraSvg()}</div>`,
+    iconSize:[28,28],
+    iconAnchor:[14,14],
   });
 }
+
+const photoClusterGroup = L.markerClusterGroup({
+  maxClusterRadius: 55,
+  spiderfyOnMaxZoom: true,
+  showCoverageOnHover: false,
+  iconCreateFunction: function(cluster){
+    return L.divIcon({
+      className:'photo-cluster',
+      html:`<div class="photo-cluster-inner">${cameraSvg()}<span class="photo-cluster-count">${cluster.getChildCount()}</span></div>`,
+      iconSize:[34,34],
+      iconAnchor:[17,17],
+    });
+  },
+}).addTo(map);
 
 function dmsToDecimal(dms, ref){
   if(!dms || dms.length < 3) return null;
@@ -735,12 +778,10 @@ async function driveDownloadFile(fileId, token){
   return await res.blob();
 }
 
-async function addPhotoMarker(photo){
-  const blob = await idbGet(photo.id);
-  if(!blob) return;
-  const url = URL.createObjectURL(blob);
-  const m = L.marker([photo.lat, photo.lng], { icon: makePhotoIcon(url, !!photo.linkedTripId) }).addTo(map);
+function addPhotoMarker(photo){
+  const m = L.marker([photo.lat, photo.lng], { icon: makePhotoIcon(!!photo.linkedTripId) });
   m.on('click', ()=> openPhotoViewer(photo.id));
+  photoClusterGroup.addLayer(m);
   photoMarkers[photo.id] = m;
 }
 
@@ -815,10 +856,7 @@ document.getElementById('photo-link-select').onchange = (e)=>{
   p.linkedTripId = e.target.value || null;
   persistPhotos();
   if(photoMarkers[p.id]){
-    idbGet(p.id).then(blob=>{
-      const url = blob ? URL.createObjectURL(blob) : '';
-      photoMarkers[p.id].setIcon(makePhotoIcon(url, !!p.linkedTripId));
-    });
+    photoMarkers[p.id].setIcon(makePhotoIcon(!!p.linkedTripId));
   }
   if(currentId) renderLinkedPhotos(currentId);
 };
@@ -827,7 +865,7 @@ document.getElementById('photo-remove').onclick = async ()=>{
   if(!viewerPhotoId) return;
   if(!confirm('Remove this photo from Cairn? (It stays in your Google Drive.)')) return;
   photos = photos.filter(p=>p.id!==viewerPhotoId);
-  if(photoMarkers[viewerPhotoId]){ map.removeLayer(photoMarkers[viewerPhotoId]); delete photoMarkers[viewerPhotoId]; }
+  if(photoMarkers[viewerPhotoId]){ photoClusterGroup.removeLayer(photoMarkers[viewerPhotoId]); delete photoMarkers[viewerPhotoId]; }
   await idbDelete(viewerPhotoId);
   persistPhotos();
   renderUnlocatedList();
