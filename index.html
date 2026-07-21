@@ -187,7 +187,9 @@
 
   #photo-viewer, #attachment-viewer{ position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75); display:none; align-items:center; justify-content:center; }
   #photo-viewer.open, #attachment-viewer.open{ display:flex; }
-  #photo-viewer-inner, #attachment-viewer-inner{ background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px; width:420px; max-width:88vw; max-height:86vh; overflow-y:auto; box-shadow:0 16px 40px rgba(0,0,0,0.5); }
+  #photo-viewer-inner, #attachment-viewer-inner{ background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px; width:420px; max-width:88vw; max-height:86vh; overflow-y:auto; box-shadow:0 16px 40px rgba(0,0,0,0.5); transition:width 0.2s ease; }
+  #photo-viewer-inner.enlarged, #attachment-viewer-inner.enlarged{ width:760px; max-width:94vw; max-height:92vh; }
+  #photo-viewer-img, #attachment-viewer-img{ cursor:zoom-in; }
   #photo-viewer-img, #attachment-viewer-img{ width:100%; border-radius:8px; display:block; margin-bottom:12px; }
   #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:14px; }
   #photo-link-select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
@@ -337,6 +339,7 @@
     <div id="photo-panel-actions" class="owner-only">
       <button class="btn" id="btn-save-folder">Save folder</button>
       <button class="btn primary" id="btn-check-photos">Check for new photos</button>
+      <button class="btn" id="btn-cleanup-heic">Clean up converted originals</button>
     </div>
     <div id="unlocated-list"></div>
     <div class="field-label" style="margin-top:16px;">Filter by date taken</div>
@@ -367,6 +370,7 @@
       <div class="field-label owner-only">Link to waypoint</div>
       <select class="owner-only" id="photo-link-select"></select>
       <div id="photo-viewer-actions">
+        <button class="btn" id="btn-photo-show-in-map" style="display:none">Show in map</button>
         <button class="btn" id="photo-viewer-close">Close</button>
         <button class="btn danger owner-only" id="photo-remove">Remove photo</button>
       </div>
@@ -378,6 +382,7 @@
       <img id="attachment-viewer-img">
       <video id="attachment-viewer-video" controls style="display:none; width:100%; border-radius:8px; margin-bottom:12px;"></video>
       <div id="attachment-viewer-actions">
+        <button class="btn" id="btn-attachment-show-in-map" style="display:none">Show in map</button>
         <button class="btn" id="attachment-viewer-close">Close</button>
         <button class="btn danger editor-only" id="attachment-remove">Remove</button>
       </div>
@@ -485,6 +490,7 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/leaflet.markercluster.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/exif-js/2.3.0/exif.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 <script>
 const CATEGORIES = {
@@ -507,11 +513,9 @@ let trips = [];
 let photos = [];
 let markers = {};
 let photoMarkers = {};
-let activeFilters = new Set(Object.keys(CATEGORIES));
-let knownGroups = new Set();
-let activeGroups = new Set();
-let knownCreators = new Set();
-let activeCreators = new Set();
+let isolatedCategory = null;
+let isolatedGroup = null;
+let isolatedCreator = null;
 let currentId = null;
 let pendingId = null;
 let isNewPin = false;
@@ -601,6 +605,20 @@ async function driveSetPublic(fileId){
       body: JSON.stringify({ role:'reader', type:'anyone' }),
     });
   }catch(e){}
+}
+
+async function driveDeleteFile(fileId){
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method:'DELETE',
+    headers:{ 'Authorization':'Bearer ' + driveAccessToken },
+  });
+  if(!res.ok && res.status !== 404) throw new Error('delete failed ' + res.status);
+}
+
+function isHeicType(mimeType, filename){
+  const mt = (mimeType || '').toLowerCase();
+  const name = (filename || '').toLowerCase();
+  return mt.includes('heic') || mt.includes('heif') || name.endsWith('.heic') || name.endsWith('.heif');
 }
 
 async function driveCreateFile(blob, filename, parentId, mimeType){
@@ -1170,11 +1188,11 @@ function buildFilters(){
   el.innerHTML = '';
   Object.entries(CATEGORIES).forEach(([key,c])=>{
     const chip = document.createElement('div');
-    chip.className = 'chip';
+    chip.className = 'chip' + (isolatedCategory && isolatedCategory!==key ? ' off' : '');
     chip.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.label}`;
     chip.onclick = ()=>{
-      if(activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
-      chip.classList.toggle('off', !activeFilters.has(key));
+      isolatedCategory = (isolatedCategory === key) ? null : key;
+      buildFilters();
       applyFilters();
     };
     el.appendChild(chip);
@@ -1198,83 +1216,62 @@ function selectCategory(key){
   document.getElementById('cat-select').dataset.selected = key;
 }
 function tripGroupKey(t){ return (t.group && t.group.trim()) ? t.group.trim() : '__ungrouped__'; }
+function tripCreatorKey(t){ return t.createdBy ? t.createdBy : '__unknown__'; }
+
+function majorityCategoryColor(groupTrips){
+  const counts = {};
+  groupTrips.forEach(t=>{ counts[t.category] = (counts[t.category]||0) + 1; });
+  let best = null, bestCount = 0;
+  Object.entries(counts).forEach(([cat,n])=>{ if(n > bestCount){ bestCount = n; best = cat; } });
+  return (CATEGORIES[best] || {}).color || '#7c8b8a';
+}
 
 function buildGroupFilters(){
   const groups = new Set();
-  let hasUngrouped = false;
   trips.forEach(t=>{
     const key = tripGroupKey(t);
-    if(key === '__ungrouped__') hasUngrouped = true; else groups.add(key);
+    if(key !== '__ungrouped__') groups.add(key);
   });
-  groups.forEach(g=>{ if(!knownGroups.has(g)){ knownGroups.add(g); activeGroups.add(g); } });
-  if(hasUngrouped && !knownGroups.has('__ungrouped__')){ knownGroups.add('__ungrouped__'); activeGroups.add('__ungrouped__'); }
-
   const el = document.getElementById('group-filters');
   el.innerHTML = '';
-  if(groups.size === 0 && !hasUngrouped) return;
+  if(groups.size === 0) return;
   Array.from(groups).sort().forEach(g=>{
+    const groupTrips = trips.filter(t=>tripGroupKey(t)===g);
+    const color = majorityCategoryColor(groupTrips);
     const chip = document.createElement('div');
-    chip.className = 'chip' + (activeGroups.has(g) ? '' : ' off');
-    chip.textContent = g;
+    chip.className = 'chip' + (isolatedGroup && isolatedGroup!==g ? ' off' : '');
+    chip.innerHTML = `<span class="dot" style="background:${color}"></span>${escapeHtml(g)}`;
     chip.onclick = ()=>{
-      if(activeGroups.has(g)) activeGroups.delete(g); else activeGroups.add(g);
-      chip.classList.toggle('off', !activeGroups.has(g));
+      isolatedGroup = (isolatedGroup === g) ? null : g;
+      buildGroupFilters();
       applyFilters();
     };
     el.appendChild(chip);
   });
-  if(hasUngrouped){
-    const chip = document.createElement('div');
-    chip.className = 'chip' + (activeGroups.has('__ungrouped__') ? '' : ' off');
-    chip.textContent = 'Ungrouped';
-    chip.onclick = ()=>{
-      if(activeGroups.has('__ungrouped__')) activeGroups.delete('__ungrouped__'); else activeGroups.add('__ungrouped__');
-      chip.classList.toggle('off', !activeGroups.has('__ungrouped__'));
-      applyFilters();
-    };
-    el.appendChild(chip);
-  }
   const datalist = document.getElementById('group-suggestions');
   datalist.innerHTML = Array.from(groups).sort().map(g=>`<option value="${escapeHtml(g)}">`).join('');
 }
 
-function tripCreatorKey(t){ return t.createdBy ? t.createdBy : '__unknown__'; }
-
 function buildCreatorFilters(){
   const creators = new Set();
-  let hasUnknown = false;
   trips.forEach(t=>{
     const key = tripCreatorKey(t);
-    if(key === '__unknown__') hasUnknown = true; else creators.add(key);
+    if(key !== '__unknown__') creators.add(key);
   });
-  creators.forEach(c=>{ if(!knownCreators.has(c)){ knownCreators.add(c); activeCreators.add(c); } });
-  if(hasUnknown && !knownCreators.has('__unknown__')){ knownCreators.add('__unknown__'); activeCreators.add('__unknown__'); }
-
   const el = document.getElementById('creator-filters');
   el.innerHTML = '';
-  if(creators.size <= 1 && !hasUnknown) return;
+  if(creators.size <= 1) return;
   Array.from(creators).sort().forEach(c=>{
     const chip = document.createElement('div');
-    chip.className = 'chip' + (activeCreators.has(c) ? '' : ' off');
+    chip.className = 'chip' + (isolatedCreator && isolatedCreator!==c ? ' off' : '');
     chip.textContent = c;
     chip.onclick = ()=>{
-      if(activeCreators.has(c)) activeCreators.delete(c); else activeCreators.add(c);
-      chip.classList.toggle('off', !activeCreators.has(c));
+      isolatedCreator = (isolatedCreator === c) ? null : c;
+      buildCreatorFilters();
       applyFilters();
     };
     el.appendChild(chip);
   });
-  if(hasUnknown){
-    const chip = document.createElement('div');
-    chip.className = 'chip' + (activeCreators.has('__unknown__') ? '' : ' off');
-    chip.textContent = 'Unattributed';
-    chip.onclick = ()=>{
-      if(activeCreators.has('__unknown__')) activeCreators.delete('__unknown__'); else activeCreators.add('__unknown__');
-      chip.classList.toggle('off', !activeCreators.has('__unknown__'));
-      applyFilters();
-    };
-    el.appendChild(chip);
-  }
 }
 
 function applyFilters(){
@@ -1283,7 +1280,10 @@ function applyFilters(){
   Object.entries(markers).forEach(([id,m])=>{
     const trip = trips.find(t=>t.id===id);
     if(!trip) return;
-    const visible = activeFilters.has(trip.category) && activeGroups.has(tripGroupKey(trip)) && activeCreators.has(tripCreatorKey(trip));
+    const visible =
+      (!isolatedCategory || trip.category === isolatedCategory) &&
+      (!isolatedGroup || tripGroupKey(trip) === isolatedGroup) &&
+      (!isolatedCreator || tripCreatorKey(trip) === isolatedCreator);
     m.setIcon(makeIcon(trip.category, !visible, weekendRatingFor(trip.id)));
     m.setZIndexOffset(visible?100:0);
   });
@@ -1316,7 +1316,11 @@ function sortTrips(list){
 function renderList(){
   const list = document.getElementById('trip-list');
   document.getElementById('count').textContent = `${trips.length} waypoint${trips.length===1?'':'s'}`;
-  let visible = trips.filter(t=>activeFilters.has(t.category) && activeGroups.has(tripGroupKey(t)) && activeCreators.has(tripCreatorKey(t)));
+  let visible = trips.filter(t=>
+    (!isolatedCategory || t.category === isolatedCategory) &&
+    (!isolatedGroup || tripGroupKey(t) === isolatedGroup) &&
+    (!isolatedCreator || tripCreatorKey(t) === isolatedCreator)
+  );
   if(searchQuery.trim()){
     const q = searchQuery.trim().toLowerCase();
     visible = visible.filter(t=> (t.title||'').toLowerCase().includes(q));
@@ -1759,6 +1763,8 @@ function releaseVideoPlayer(videoEl){
 let viewerAttachment = null;
 function openAttachmentViewer(trip, id){
   viewerAttachment = { trip, id };
+  document.getElementById('attachment-viewer-inner').classList.remove('enlarged');
+  document.getElementById('btn-attachment-show-in-map').style.display = 'inline-block';
   const att = (trip.attachments || []).find(a=>a.id===id);
   const isVideo = att && isVideoType(att.mimeType);
   document.getElementById('attachment-viewer-img').style.display = isVideo ? 'none' : 'block';
@@ -1770,6 +1776,18 @@ function openAttachmentViewer(trip, id){
   }
   document.getElementById('attachment-viewer').classList.add('open');
 }
+document.getElementById('attachment-viewer-img').onclick = ()=>{
+  document.getElementById('attachment-viewer-inner').classList.toggle('enlarged');
+};
+document.getElementById('btn-attachment-show-in-map').onclick = ()=>{
+  if(!viewerAttachment) return;
+  const t = viewerAttachment.trip;
+  document.getElementById('attachment-viewer').classList.remove('open');
+  document.getElementById('gallery-screen').classList.remove('open');
+  releaseVideoPlayer(document.getElementById('attachment-viewer-video'));
+  map.flyTo([t.lat, t.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
+  openDrawer(t.id, false);
+};
 document.getElementById('attachment-viewer-close').onclick = ()=>{
   document.getElementById('attachment-viewer').classList.remove('open');
   releaseVideoPlayer(document.getElementById('attachment-viewer-video'));
@@ -1853,7 +1871,7 @@ async function runPlaceSearch(query){
         if(!document.getElementById('f-title').value.trim()){
           document.getElementById('f-title').value = r.display_name.split(',')[0];
         }
-        document.getElementById('f-place-search').value = '';
+        document.getElementById('f-place-search').value = r.display_name;
         box.innerHTML = '';
       });
       box.appendChild(row);
@@ -1902,22 +1920,48 @@ async function checkForNewPhotos(){
     const token = await requestDriveToken();
     setPhotoStatus('Checking for new photos…');
     const files = await driveListFolder(driveFolderId, token);
-    const existingIds = new Set(photos.map(p=>p.id));
+    const existingIds = new Set(photos.map(p=> p.sourceId || p.id));
     const newFiles = files.filter(f=>!existingIds.has(f.id));
+    let convertedCount = 0;
     for(const f of newFiles){
       let meta = { lat:null, lng:null, takenAt:null };
+      let displayId = f.id;
+      let mimeType = f.mimeType;
+      let heicOriginalId = null;
       if(!isVideoType(f.mimeType)){
         const blob = await driveDownloadFile(f.id, token);
-        meta = await extractPhotoMeta(blob);
+        if(isHeicType(f.mimeType, f.name) && typeof heic2any !== 'undefined'){
+          try{
+            setPhotoStatus(`Converting ${f.name}…`);
+            const converted = await heic2any({ blob, toType:'image/jpeg', quality:0.85 });
+            const jpegBlob = Array.isArray(converted) ? converted[0] : converted;
+            meta = await extractPhotoMeta(jpegBlob);
+            if(!meta.lat || !meta.takenAt){
+              const origMeta = await extractPhotoMeta(blob);
+              meta = { lat: meta.lat ?? origMeta.lat, lng: meta.lng ?? origMeta.lng, takenAt: meta.takenAt ?? origMeta.takenAt };
+            }
+            const folderId = await ensureAppFolder();
+            const newId = await driveCreateFile(jpegBlob, f.name.replace(/\.(heic|heif)$/i, '.jpg'), folderId, 'image/jpeg');
+            await driveSetPublic(newId);
+            displayId = newId;
+            mimeType = 'image/jpeg';
+            heicOriginalId = f.id;
+            convertedCount++;
+          }catch(e){
+            meta = await extractPhotoMeta(blob);
+          }
+        } else {
+          meta = await extractPhotoMeta(blob);
+        }
       }
-      const photo = { id:f.id, name:f.name, mimeType:f.mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
+      const photo = { id:displayId, sourceId:f.id, name:f.name, mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null, heicOriginalId };
       photos.push(photo);
       if(photo.lat && photo.lng) addPhotoMarker(photo);
     }
     scheduleCloudSave();
     renderUnlocatedList();
     applyPhotoDateFilter();
-    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now.`);
+    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now${convertedCount ? ` (${convertedCount} converted from HEIC)` : ''}.`);
   }catch(e){
     setPhotoStatus("Couldn't reach Google Drive. Try again, or reconnect.");
   }
@@ -1948,6 +1992,7 @@ function openPhotoViewer(id){
   const p = photos.find(ph=>ph.id===id);
   if(!p) return;
   viewerPhotoId = id;
+  document.getElementById('photo-viewer-inner').classList.remove('enlarged');
   const isVideo = isVideoType(p.mimeType);
   document.getElementById('photo-viewer-img').style.display = isVideo ? 'none' : 'block';
   document.getElementById('photo-viewer-video').style.display = isVideo ? 'block' : 'none';
@@ -1957,6 +2002,7 @@ function openPhotoViewer(id){
   populateLinkSelect(p.linkedTripId);
 
   const hasLocation = !!(p.lat && p.lng);
+  document.getElementById('btn-photo-show-in-map').style.display = hasLocation ? 'inline-block' : 'none';
   document.getElementById('photo-location-set').style.display = isOwner ? 'block' : 'none';
   document.getElementById('photo-location-label').textContent = hasLocation ? 'Location' : 'Location (not set)';
   document.getElementById('btn-photo-set-location').textContent = hasLocation ? 'Update location' : 'Set location';
@@ -1998,6 +2044,17 @@ document.getElementById('btn-photo-set-location').onclick = ()=>{
   renderUnlocatedList();
   applyPhotoDateFilter();
   document.getElementById('photo-location-hint').textContent = 'Location updated.';
+};
+document.getElementById('photo-viewer-img').onclick = ()=>{
+  document.getElementById('photo-viewer-inner').classList.toggle('enlarged');
+};
+document.getElementById('btn-photo-show-in-map').onclick = ()=>{
+  const p = photos.find(ph=>ph.id===viewerPhotoId);
+  if(!p || !p.lat || !p.lng) return;
+  document.getElementById('photo-viewer').classList.remove('open');
+  document.getElementById('gallery-screen').classList.remove('open');
+  releaseVideoPlayer(document.getElementById('photo-viewer-video'));
+  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
 };
 document.getElementById('photo-viewer-close').onclick = ()=>{
   document.getElementById('photo-viewer').classList.remove('open');
@@ -2096,6 +2153,24 @@ document.getElementById('btn-save-folder').onclick = ()=>{
 };
 document.getElementById('btn-check-photos').onclick = checkForNewPhotos;
 
+async function cleanupHeicOriginals(){
+  const pending = photos.filter(p=>p.heicOriginalId);
+  if(pending.length === 0){ setPhotoStatus('No converted originals waiting to be cleaned up.'); return; }
+  if(!confirm(`Delete ${pending.length} original HEIC file(s) from Drive? The converted JPEG copies already in Cairn are unaffected.`)) return;
+  setPhotoStatus('Cleaning up…');
+  let okCount = 0;
+  for(const p of pending){
+    try{
+      await driveDeleteFile(p.heicOriginalId);
+      p.heicOriginalId = null;
+      okCount++;
+    }catch(e){}
+  }
+  scheduleCloudSave();
+  setPhotoStatus(`Cleaned up ${okCount} of ${pending.length} original HEIC file(s).`);
+}
+document.getElementById('btn-cleanup-heic').onclick = cleanupHeicOriginals;
+
 /* ---------- Gallery ---------- */
 
 let galleryFilter = 'all';
@@ -2124,16 +2199,6 @@ function collectGalleryItems(){
   return items.sort((a,b)=> (b.date||0) - (a.date||0));
 }
 
-function goToGalleryItem(item){
-  document.getElementById('gallery-screen').classList.remove('open');
-  if(item.lat && item.lng){
-    map.flyTo([item.lat, item.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
-    setTimeout(()=> item.openFn(), 350);
-  } else {
-    item.openFn();
-  }
-}
-
 function renderGallery(){
   const grid = document.getElementById('gallery-grid');
   let items = collectGalleryItems();
@@ -2153,7 +2218,7 @@ function renderGallery(){
     } else {
       tile.innerHTML = `<img src="${publicFileUrl(item.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
     }
-    tile.onclick = ()=> goToGalleryItem(item);
+    tile.onclick = ()=> item.openFn();
     grid.appendChild(tile);
   });
 }
