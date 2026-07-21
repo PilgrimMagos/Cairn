@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cairn — a map of trips worth taking</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --ink:#0f1e1c;
+    --ink-soft:#20342f;
+    --parchment:#faf3e0;
+    --parchment-dim:#e9dfc3;
+    --parchment-line: rgba(15,30,28,0.16);
+    --hike:#1f6b30;
+    --hike-dark:#123f1c;
+    --history:#c4460f;
+    --history-dark:#822c08;
+    --town:#6a2f8c;
+    --town-dark:#43195a;
+    --food:#d98a00;
+    --food-dark:#8f5b00;
+    --wild:#0d5f7a;
+    --wild-dark:#083c4d;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;margin:0;}
+  body{
+    font-family:'IBM Plex Sans', sans-serif;
+    background:var(--ink);
+    color:var(--parchment);
+    overflow:hidden;
+  }
+  #app{ position:relative; width:100vw; height:100vh; }
+  #map{ position:absolute; inset:0; background:#cfe0dd; }
+  .leaflet-tile-pane{
+    filter: saturate(1.25) contrast(1.12) brightness(1.01);
+  }
+  .leaflet-control-attribution{
+    background:rgba(250,243,224,0.88) !important;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px !important;
+    color:var(--ink-soft) !important;
+  }
+  .leaflet-control-zoom a{
+    background:var(--parchment) !important;
+    color:var(--ink) !important;
+    border-color:var(--parchment-line) !important;
+  }
+
+  #header{
+    position:absolute; top:0; left:0; right:0; z-index:1000;
+    display:flex; align-items:center; justify-content:space-between;
+    padding:18px 22px;
+    pointer-events:none;
+  }
+  #brand{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
+  #brand svg{ width:26px; height:26px; }
+  #brand h1{
+    font-family:'Fraunces', serif; font-weight:600; font-style:italic; font-size:22px;
+    margin:0; color:var(--parchment); letter-spacing:0.01em;
+  }
+  #count{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--parchment-dim); opacity:0.9; margin-left:2px; }
+  #header-right{ display:flex; gap:10px; pointer-events:auto; }
+  .pill-btn{
+    font-family:'IBM Plex Sans', sans-serif; font-size:12.5px; font-weight:500;
+    color:var(--parchment); background:rgba(15,30,28,0.62);
+    border:1px solid rgba(250,243,224,0.28); border-radius:20px; padding:8px 14px; cursor:pointer;
+    backdrop-filter: blur(6px); transition: background 0.15s ease, border-color 0.15s ease;
+  }
+  .pill-btn:hover{ background:rgba(15,30,28,0.85); border-color:rgba(250,243,224,0.5); }
+  .pill-btn.active{ background:var(--history); border-color:var(--history); color:#fff; }
+
+  #sidebar{
+    position:absolute; top:66px; left:16px; bottom:16px; z-index:900; width:270px;
+    background:rgba(15,30,28,0.93); border:1px solid rgba(250,243,224,0.16); border-radius:14px;
+    backdrop-filter: blur(8px); display:flex; flex-direction:column; overflow:hidden;
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+  #sidebar.hidden{ transform: translateX(-300px); opacity:0; pointer-events:none; }
+  #sidebar-head{ padding:14px 16px 10px; border-bottom:1px solid rgba(250,243,224,0.14); }
+  #sidebar-head h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 10px; color:var(--parchment); }
+  #filters{ display:flex; flex-wrap:wrap; gap:6px; }
+  .chip{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:4px 9px; border-radius:20px;
+    border:1px solid rgba(250,243,224,0.3); color:var(--parchment-dim); cursor:pointer;
+    display:flex; align-items:center; gap:5px; user-select:none;
+  }
+  .chip .dot{ width:7px; height:7px; border-radius:50%; }
+  .chip.off{ opacity:0.35; }
+  #trip-list{ overflow-y:auto; flex:1; padding:6px 8px 12px; }
+  .trip-row{ padding:10px 10px; border-radius:9px; cursor:pointer; margin-bottom:2px; display:flex; flex-direction:column; gap:3px; }
+  .trip-row:hover{ background:rgba(250,243,224,0.1); }
+  .trip-row .t-title{ font-family:'Fraunces', serif; font-weight:500; font-size:14px; color:var(--parchment); }
+  .trip-row .t-meta{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.8;
+    display:flex; align-items:center; gap:6px;
+  }
+  .trip-row .t-meta .dot{ width:6px; height:6px; border-radius:50%; flex-shrink:0; }
+  #empty-list{ padding:18px 12px; font-size:12.5px; color:var(--parchment-dim); opacity:0.75; line-height:1.5; }
+
+  #hint{
+    position:absolute; left:50%; top:26px; transform:translateX(-50%); z-index:800;
+    font-family:'Fraunces', serif; font-style:italic; font-weight:500; font-size:14.5px;
+    color:var(--ink); background:var(--parchment); border:1px solid var(--parchment-line);
+    padding:9px 18px; border-radius:24px; box-shadow:0 6px 18px rgba(0,0,0,0.3);
+    pointer-events:none; transition:opacity 0.4s ease;
+  }
+
+  .cairn-icon{ overflow:visible; }
+  .cairn-icon svg{ display:block; filter:drop-shadow(0 2px 3px rgba(0,0,0,0.45)); }
+  .cairn-icon.dimmed{ opacity:0.15; }
+
+  #drawer{
+    position:absolute; top:0; right:0; bottom:0; z-index:1100; width:380px;
+    background:var(--parchment); color:var(--ink); box-shadow:-8px 0 24px rgba(0,0,0,0.4);
+    transform:translateX(100%); transition:transform 0.28s cubic-bezier(.22,1,.36,1);
+    display:flex; flex-direction:column;
+  }
+  #drawer.open{ transform:translateX(0); }
+  #drawer-inner{ padding:24px 24px 20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; }
+  #drawer-close{
+    align-self:flex-end; background:none; border:none; cursor:pointer;
+    color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65;
+  }
+  #drawer-close:hover{ opacity:1; }
+  .field-label{
+    font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em;
+    color:var(--ink-soft); opacity:0.7; margin:16px 0 6px;
+  }
+  .field-label:first-of-type{ margin-top:0; }
+  #f-title{
+    font-family:'Fraunces', serif; font-weight:600; font-size:23px;
+    border:none; background:none; color:var(--ink); width:100%; padding:0; border-bottom:1px solid transparent;
+  }
+  #f-title:focus{ outline:none; border-bottom:1px solid var(--parchment-line); }
+  #cat-select{ display:flex; flex-wrap:wrap; gap:7px; }
+  .cat-opt{
+    font-family:'IBM Plex Sans', sans-serif; font-size:12px; font-weight:500;
+    padding:6px 12px; border-radius:20px; cursor:pointer; border:1.5px solid transparent; color:#fff; opacity:0.55;
+  }
+  .cat-opt.active{ opacity:1; border-color:rgba(0,0,0,0.3); }
+  #f-coords{
+    width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px;
+    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink);
+  }
+  #f-coords:focus{ outline:none; border-color:var(--ink-soft); }
+  #f-coords.invalid{ border-color:var(--history); }
+  #coord-sub{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--ink-soft); opacity:0.55; margin-top:5px; }
+  #f-notes{
+    font-family:'IBM Plex Sans', sans-serif; font-size:14px; line-height:1.6;
+    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.45); border-radius:8px; padding:10px 12px;
+    resize:vertical; min-height:120px; color:var(--ink); width:100%;
+  }
+  #f-notes:focus{ outline:none; border-color:var(--ink-soft); }
+  #gpx-box{
+    border:1px dashed var(--parchment-line); border-radius:8px; padding:12px; display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+  }
+  #gpx-status{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); flex:1; }
+  #drawer-actions{ display:flex; gap:10px; margin-top:22px; padding-top:16px; border-top:1px solid var(--parchment-line); }
+  .btn{
+    font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:500;
+    padding:9px 16px; border-radius:8px; cursor:pointer; border:1px solid var(--parchment-line); background:transparent; color:var(--ink);
+  }
+  .btn:hover{ background:rgba(15,30,28,0.08); }
+  .btn.primary{ background:var(--ink); color:var(--parchment); border-color:var(--ink); }
+  .btn.primary:hover{ background:var(--ink-soft); }
+  .btn.danger{ color:var(--history-dark); border-color:transparent; margin-left:auto; }
+  .btn.danger:hover{ background:rgba(196,70,15,0.12); }
+  .btn.small{ font-size:12px; padding:7px 12px; }
+  #save-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.55; margin-top:10px; text-align:center; height:14px; }
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="map"></div>
+
+  <div id="header">
+    <div id="brand">
+      <svg viewBox="0 0 26 26" fill="none">
+        <path d="M13 3L4 21H22L13 3Z" stroke="#faf3e0" stroke-width="1.4" stroke-linejoin="round" fill="rgba(250,243,224,0.15)"/>
+        <path d="M7.5 21L13 10L18.5 21" stroke="#faf3e0" stroke-width="1.1"/>
+        <path d="M9.6 16.5H16.4" stroke="#faf3e0" stroke-width="1"/>
+      </svg>
+      <h1>Cairn</h1>
+      <span id="count">0 waypoints</span>
+    </div>
+    <div id="header-right">
+      <button class="pill-btn" id="toggle-all-routes">All routes</button>
+      <button class="pill-btn" id="toggle-seamarks">Sea marks</button>
+      <button class="pill-btn" id="toggle-sidebar">List</button>
+      <button class="pill-btn" id="btn-export">Export backup</button>
+      <button class="pill-btn" id="btn-import">Import backup</button>
+      <input type="file" id="import-file" accept=".json" style="display:none">
+      <button class="pill-btn" id="btn-new">+ Add waypoint</button>
+    </div>
+  </div>
+
+  <div id="hint">Click the map, or use + Add waypoint to type coordinates</div>
+
+  <div id="sidebar">
+    <div id="sidebar-head">
+      <h2>Your waypoints</h2>
+      <div id="filters"></div>
+    </div>
+    <div id="trip-list"></div>
+  </div>
+
+  <div id="drawer">
+    <div id="drawer-inner">
+      <button id="drawer-close">✕ close</button>
+      <div class="field-label">Title</div>
+      <input id="f-title" placeholder="Name this place">
+      <div class="field-label">Category</div>
+      <div id="cat-select"></div>
+      <div class="field-label">Coordinates</div>
+      <input id="f-coords" type="text" placeholder="55.699391, -4.904652">
+      <div id="coord-sub">Paste straight from Google Maps: latitude, longitude</div>
+      <div class="field-label">Notes</div>
+      <textarea id="f-notes" placeholder="What's the plan? Route ideas, best season, who to bring, where to stay…"></textarea>
+      <div class="field-label">GPX route</div>
+      <div id="gpx-box">
+        <input type="file" id="gpx-file" accept=".gpx" style="display:none">
+        <button class="btn small" id="btn-gpx-upload">Upload GPX</button>
+        <button class="btn small" id="btn-gpx-remove" style="display:none">Remove route</button>
+        <span id="gpx-status">No route attached</span>
+      </div>
+      <div id="drawer-actions">
+        <button class="btn danger" id="btn-delete">Delete</button>
+        <button class="btn" id="btn-cancel">Cancel</button>
+        <button class="btn primary" id="btn-save">Save</button>
+      </div>
+      <div id="save-hint"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script>
+const CATEGORIES = {
+  hike:   { label:'Hike',            color:'#1f6b30' },
+  history:{ label:'History & ruins', color:'#c4460f' },
+  town:   { label:'Town & city',     color:'#6a2f8c' },
+  food:   { label:'Food & drink',    color:'#d98a00' },
+  wild:   { label:'Wild & remote',   color:'#0d5f7a' },
+};
+
+const UK_IRELAND_BOUNDS = L.latLngBounds([49.0, -11.5], [61.0, 2.0]);
+
+let trips = [];
+let markers = {};
+let activeFilters = new Set(Object.keys(CATEGORIES));
+let currentId = null;
+let pendingId = null;
+let isNewPin = false;
+let pendingGpxAction = null;
+let pendingGpxText = null;
+let routeLayer = null;
+let allRoutesOn = false;
+const allRoutesLayer = L.layerGroup();
+let saveTimer = null;
+let seamarksOn = false;
+
+function storageGet(key){
+  try{
+    const v = localStorage.getItem('cairn:' + key);
+    return v === null ? null : { value: v };
+  }catch(e){ return null; }
+}
+function storageSet(key, value){
+  localStorage.setItem('cairn:' + key, value);
+}
+function storageDelete(key){
+  localStorage.removeItem('cairn:' + key);
+}
+
+const map = L.map('map', {
+  zoomControl:true,
+  attributionControl:true,
+  maxZoom:18,
+  maxBoundsViscosity:1.0,
+}).fitBounds(UK_IRELAND_BOUNDS);
+
+const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+  attribution: '© OpenStreetMap contributors',
+  maxZoom: 19,
+}).addTo(map);
+
+function lockToUkIreland(){
+  const fitZoom = map.getBoundsZoom(UK_IRELAND_BOUNDS, false);
+  map.setMinZoom(fitZoom);
+  map.setMaxBounds(UK_IRELAND_BOUNDS.pad(0.03));
+}
+lockToUkIreland();
+map.on('resize', lockToUkIreland);
+
+const seamarksLayer = L.tileLayer('https://tiles.openseamap.org/seamark/{z}/{x}/{y}.png', {
+  attribution: '© OpenSeaMap contributors',
+  maxZoom: 18,
+});
+
+document.getElementById('toggle-seamarks').onclick = (e)=>{
+  seamarksOn = !seamarksOn;
+  if(seamarksOn){ seamarksLayer.addTo(map); e.target.classList.add('active'); }
+  else{ map.removeLayer(seamarksLayer); e.target.classList.remove('active'); }
+};
+
+function cairnSvg(color, dimmed){
+  return `<svg width="30" height="34" viewBox="0 0 30 34" class="${dimmed?'dimmed':''}">
+    <ellipse cx="15" cy="30" rx="10" ry="3" fill="${color}" opacity="0.92"/>
+    <ellipse cx="15.5" cy="22" rx="7.5" ry="3.3" fill="${color}"/>
+    <ellipse cx="14.3" cy="14.5" rx="5.6" ry="2.6" fill="${color}"/>
+    <ellipse cx="15" cy="8.2" rx="3.6" ry="2" fill="${color}"/>
+  </svg>`;
+}
+
+function makeIcon(cat, dimmed){
+  const c = CATEGORIES[cat] ? CATEGORIES[cat].color : '#0d5f7a';
+  return L.divIcon({ className:'cairn-icon', html: cairnSvg(c, dimmed), iconSize:[30,34], iconAnchor:[15,32] });
+}
+
+function buildFilters(){
+  const el = document.getElementById('filters');
+  el.innerHTML = '';
+  Object.entries(CATEGORIES).forEach(([key,c])=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip';
+    chip.innerHTML = `<span class="dot" style="background:${c.color}"></span>${c.label}`;
+    chip.onclick = ()=>{
+      if(activeFilters.has(key)) activeFilters.delete(key); else activeFilters.add(key);
+      chip.classList.toggle('off', !activeFilters.has(key));
+      applyFilters();
+    };
+    el.appendChild(chip);
+  });
+}
+
+function buildCatSelect(){
+  const el = document.getElementById('cat-select');
+  el.innerHTML='';
+  Object.entries(CATEGORIES).forEach(([key,c])=>{
+    const b = document.createElement('div');
+    b.className = 'cat-opt';
+    b.dataset.key = key;
+    b.textContent = c.label;
+    b.style.background = c.color;
+    b.onclick = ()=> selectCategory(key);
+    el.appendChild(b);
+  });
+}
+
+function selectCategory(key){
+  document.querySelectorAll('.cat-opt').forEach(o=> o.classList.toggle('active', o.dataset.key===key));
+  document.getElementById('cat-select').dataset.selected = key;
+}
+
+function applyFilters(){
+  Object.entries(markers).forEach(([id,m])=>{
+    const trip = trips.find(t=>t.id===id);
+    if(!trip) return;
+    const visible = activeFilters.has(trip.category);
+    m.setIcon(makeIcon(trip.category, !visible));
+    m.setZIndexOffset(visible?100:0);
+  });
+  renderList();
+}
+
+function renderList(){
+  const list = document.getElementById('trip-list');
+  document.getElementById('count').textContent = `${trips.length} waypoint${trips.length===1?'':'s'}`;
+  const visible = trips.filter(t=>activeFilters.has(t.category)).sort((a,b)=>b.created-a.created);
+  if(trips.length===0){
+    list.innerHTML = '<div id="empty-list">No cairns placed yet. Click the map or use + Add waypoint.</div>';
+    return;
+  }
+  if(visible.length===0){
+    list.innerHTML = '<div id="empty-list">No waypoints match the current filters.</div>';
+    return;
+  }
+  list.innerHTML='';
+  visible.forEach(t=>{
+    const row = document.createElement('div');
+    row.className='trip-row';
+    const c = CATEGORIES[t.category];
+    row.innerHTML = `<div class="t-title">${escapeHtml(t.title||'Untitled')}</div>
+      <div class="t-meta"><span class="dot" style="background:${c.color}"></span>${c.label}${t.hasGpx?' · route attached':''}</div>`;
+    row.onclick = ()=>{
+      map.flyTo([t.lat,t.lng], Math.max(map.getZoom(),9), {duration:0.6});
+      openDrawer(t.id, false);
+      if(t.hasGpx) showRoute(t);
+    };
+    list.appendChild(row);
+  });
+}
+
+function escapeHtml(s){
+  const d = document.createElement('div');
+  d.textContent = s;
+  return d.innerHTML;
+}
+
+function addMarker(trip){
+  const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category) }).addTo(map);
+  m.on('click', ()=>{ openDrawer(trip.id, false); if(trip.hasGpx) showRoute(trip); });
+  markers[trip.id] = m;
+}
+
+function resetGpxState(){
+  pendingGpxAction = null;
+  pendingGpxText = null;
+  document.getElementById('gpx-file').value = '';
+}
+
+function refreshGpxUi(hasGpx){
+  const status = document.getElementById('gpx-status');
+  const removeBtn = document.getElementById('btn-gpx-remove');
+  if(pendingGpxAction==='add'){ status.textContent = 'New route ready to save'; removeBtn.style.display='inline-block'; }
+  else if(pendingGpxAction==='remove'){ status.textContent = 'Route will be removed on save'; removeBtn.style.display='none'; }
+  else if(hasGpx){ status.textContent = 'Route attached'; removeBtn.style.display='inline-block'; }
+  else{ status.textContent = 'No route attached'; removeBtn.style.display='none'; }
+}
+
+function openDrawer(id, isNew, latlng){
+  currentId = isNew ? null : id;
+  isNewPin = isNew;
+  resetGpxState();
+  const drawer = document.getElementById('drawer');
+  const del = document.getElementById('btn-delete');
+  if(isNew){
+    pendingId = 'w' + Date.now();
+    const center = latlng || map.getCenter();
+    document.getElementById('f-title').value = '';
+    document.getElementById('f-notes').value = '';
+    document.getElementById('f-coords').value = `${center.lat.toFixed(6)}, ${center.lng.toFixed(6)}`;
+    document.getElementById('f-coords').classList.remove('invalid');
+    selectCategory('hike');
+    del.style.display = 'none';
+    refreshGpxUi(false);
+  } else {
+    pendingId = id;
+    const t = trips.find(tr=>tr.id===id);
+    document.getElementById('f-title').value = t.title;
+    document.getElementById('f-notes').value = t.notes;
+    document.getElementById('f-coords').value = `${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`;
+    document.getElementById('f-coords').classList.remove('invalid');
+    selectCategory(t.category);
+    del.style.display = 'inline-block';
+    refreshGpxUi(t.hasGpx);
+  }
+  drawer.classList.add('open');
+  document.getElementById('save-hint').textContent='';
+  setTimeout(()=>document.getElementById('f-title').focus(), 200);
+  hideHint();
+}
+
+function closeDrawer(){
+  document.getElementById('drawer').classList.remove('open');
+  currentId = null; pendingId = null; isNewPin = false;
+  resetGpxState();
+  clearRoute();
+}
+
+function hideHint(){ const h = document.getElementById('hint'); if(h) h.style.opacity='0'; }
+
+function parseGpxText(text){
+  const doc = new DOMParser().parseFromString(text, 'application/xml');
+  if(doc.querySelector('parsererror')) return [];
+  let pts = Array.from(doc.querySelectorAll('trkpt, rtept'));
+  if(pts.length===0) pts = Array.from(doc.querySelectorAll('wpt'));
+  return pts.map(p=>[parseFloat(p.getAttribute('lat')), parseFloat(p.getAttribute('lon'))])
+            .filter(c=>Number.isFinite(c[0]) && Number.isFinite(c[1]));
+}
+
+function clearRoute(){ if(routeLayer){ map.removeLayer(routeLayer); routeLayer=null; } }
+
+function loadAllRoutes(){
+  allRoutesLayer.clearLayers();
+  let combined = null;
+  trips.filter(t=>t.hasGpx).forEach(t=>{
+    const res = storageGet('gpx:' + t.id);
+    if(!res || !res.value) return;
+    const coords = parseGpxText(res.value);
+    if(coords.length < 2) return;
+    const line = L.polyline(coords, { color: CATEGORIES[t.category].color, weight:3.5, opacity:0.8 });
+    line.addTo(allRoutesLayer);
+    combined = combined ? combined.extend(line.getBounds()) : L.latLngBounds(line.getBounds());
+  });
+  if(!map.hasLayer(allRoutesLayer)) allRoutesLayer.addTo(map);
+  if(combined) map.fitBounds(combined, { padding:[70,70] });
+}
+
+function refreshAllRoutesIfOn(){ if(allRoutesOn) loadAllRoutes(); }
+
+document.getElementById('toggle-all-routes').onclick = (e)=>{
+  allRoutesOn = !allRoutesOn;
+  if(allRoutesOn){
+    clearRoute();
+    loadAllRoutes();
+    e.target.classList.add('active');
+  } else {
+    allRoutesLayer.clearLayers();
+    map.removeLayer(allRoutesLayer);
+    e.target.classList.remove('active');
+  }
+};
+
+async function showRoute(trip){
+  clearRoute();
+  if(!trip.hasGpx) return;
+  try{
+    const res = storageGet('gpx:' + trip.id);
+    if(!res || !res.value) return;
+    const coords = parseGpxText(res.value);
+    if(coords.length < 2) return;
+    routeLayer = L.polyline(coords, { color: CATEGORIES[trip.category].color, weight:4, opacity:0.85 }).addTo(map);
+    map.fitBounds(routeLayer.getBounds(), { padding:[70,70] });
+  }catch(e){}
+}
+
+document.getElementById('btn-gpx-upload').onclick = ()=> document.getElementById('gpx-file').click();
+
+document.getElementById('gpx-file').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    const coords = parseGpxText(reader.result);
+    if(coords.length < 2){
+      document.getElementById('gpx-status').textContent = "Couldn't read points from that file";
+      return;
+    }
+    pendingGpxAction = 'add';
+    pendingGpxText = reader.result;
+    refreshGpxUi(true);
+  };
+  reader.readAsText(file);
+};
+
+document.getElementById('btn-gpx-remove').onclick = ()=>{
+  pendingGpxAction = 'remove';
+  pendingGpxText = null;
+  refreshGpxUi(false);
+};
+
+async function loadTrips(){
+  try{
+    const res = storageGet('trips');
+    trips = res && res.value ? JSON.parse(res.value) : [];
+  }catch(e){ trips = []; }
+  trips.forEach(addMarker);
+  if(trips.length>0) hideHint();
+  applyFilters();
+  renderList();
+}
+
+async function persist(){
+  try{
+    storageSet('trips', JSON.stringify(trips));
+    const hint = document.getElementById('save-hint');
+    hint.textContent = 'saved';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
+  }catch(e){
+    document.getElementById('save-hint').textContent = 'could not save';
+  }
+}
+
+document.getElementById('btn-save').onclick = async ()=>{
+  const title = document.getElementById('f-title').value.trim() || 'Untitled';
+  const notes = document.getElementById('f-notes').value;
+  const category = document.getElementById('cat-select').dataset.selected || 'hike';
+  const coordsField = document.getElementById('f-coords');
+  const parts = coordsField.value.split(',').map(s=>parseFloat(s.trim()));
+  const [lat, lng] = parts;
+
+  if(parts.length !== 2 || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180){
+    coordsField.classList.add('invalid');
+    document.getElementById('save-hint').textContent = 'paste coordinates as: latitude, longitude';
+    return;
+  }
+  coordsField.classList.remove('invalid');
+
+  let hasGpx = false;
+  if(isNewPin){
+    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), hasGpx:false };
+    trips.push(trip);
+    addMarker(trip);
+    if(pendingGpxAction==='add'){
+      try{ storageSet('gpx:' + pendingId, pendingGpxText); trip.hasGpx = true; }catch(e){}
+    }
+  } else {
+    const t = trips.find(tr=>tr.id===currentId);
+    t.title = title; t.notes = notes; t.category = category; t.lat = lat; t.lng = lng;
+    markers[currentId].setLatLng([lat,lng]);
+    markers[currentId].setIcon(makeIcon(category));
+    if(pendingGpxAction==='add'){
+      try{ storageSet('gpx:' + currentId, pendingGpxText); t.hasGpx = true; }catch(e){}
+    } else if(pendingGpxAction==='remove'){
+      try{ storageDelete('gpx:' + currentId); }catch(e){}
+      t.hasGpx = false;
+    }
+  }
+
+  await persist();
+  applyFilters();
+  renderList();
+  refreshAllRoutesIfOn();
+  closeDrawer();
+};
+
+document.getElementById('btn-cancel').onclick = ()=> closeDrawer();
+document.getElementById('drawer-close').onclick = ()=> closeDrawer();
+
+document.getElementById('btn-delete').onclick = async ()=>{
+  if(!currentId) return;
+  if(!confirm('Delete this cairn? This cannot be undone.')) return;
+  const t = trips.find(tr=>tr.id===currentId);
+  trips = trips.filter(tr=>tr.id!==currentId);
+  if(markers[currentId]){ map.removeLayer(markers[currentId]); delete markers[currentId]; }
+  if(t && t.hasGpx){ try{ storageDelete('gpx:' + currentId); }catch(e){} }
+  await persist();
+  renderList();
+  refreshAllRoutesIfOn();
+  closeDrawer();
+};
+
+document.getElementById('toggle-sidebar').onclick = ()=>{
+  document.getElementById('sidebar').classList.toggle('hidden');
+};
+
+document.getElementById('btn-new').onclick = ()=>{
+  if(document.getElementById('drawer').classList.contains('open')) return;
+  openDrawer(null, true);
+};
+
+map.on('click', (e)=>{
+  if(document.getElementById('drawer').classList.contains('open')) return;
+  openDrawer(null, true, e.latlng);
+});
+
+document.getElementById('btn-export').onclick = ()=>{
+  const bundle = { trips, gpx:{} };
+  trips.forEach(t=>{
+    if(t.hasGpx){
+      const g = storageGet('gpx:' + t.id);
+      if(g) bundle.gpx[t.id] = g.value;
+    }
+  });
+  const blob = new Blob([JSON.stringify(bundle, null, 2)], { type:'application/json' });
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'cairn-backup-' + new Date().toISOString().slice(0,10) + '.json';
+  a.click();
+};
+
+document.getElementById('btn-import').onclick = ()=> document.getElementById('import-file').click();
+
+document.getElementById('import-file').onchange = (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  const reader = new FileReader();
+  reader.onload = ()=>{
+    try{
+      const bundle = JSON.parse(reader.result);
+      if(!Array.isArray(bundle.trips)) throw new Error('bad file');
+      if(!confirm(`Import ${bundle.trips.length} waypoint(s)? This adds to what you already have.`)) return;
+      bundle.trips.forEach(t=>{
+        if(trips.some(existing=>existing.id===t.id)) t.id = 'w' + Date.now() + Math.random().toString(36).slice(2,6);
+        trips.push(t);
+        addMarker(t);
+        if(t.hasGpx && bundle.gpx && bundle.gpx[t.id]) storageSet('gpx:' + t.id, bundle.gpx[t.id]);
+      });
+      storageSet('trips', JSON.stringify(trips));
+      applyFilters();
+      renderList();
+      hideHint();
+    }catch(err){
+      alert("Couldn't read that backup file.");
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+};
+
+buildFilters();
+buildCatSelect();
+loadTrips();
+</script>
+</body>
+</html>
