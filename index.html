@@ -28,14 +28,14 @@
     --wild-dark:#083c4d;
   }
   *{box-sizing:border-box;}
-  html,body{height:100%;margin:0;}
+  html,body{height:100%; height:100dvh; margin:0;}
   body{
     font-family:'IBM Plex Sans', sans-serif;
     background:var(--ink);
     color:var(--parchment);
     overflow:hidden;
   }
-  #app{ position:relative; width:100vw; height:100vh; }
+  #app{ position:relative; width:100vw; height:100vh; height:100dvh; }
   #map{ position:absolute; inset:0; background:#cfe0dd; }
   .leaflet-tile-pane{
     filter: saturate(1.25) contrast(1.12) brightness(1.01);
@@ -199,6 +199,13 @@
   .unlocated-row img{ width:32px; height:32px; border-radius:6px; object-fit:cover; flex-shrink:0; cursor:pointer; }
   .unlocated-row span{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--parchment-dim); flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
+  #date-filter-row{ display:flex; align-items:center; gap:6px; }
+  #date-filter-row input{ flex:1; font-size:11px; padding:6px 8px; color-scheme: dark; }
+  #date-filter-row span{ font-family:'IBM Plex Mono', monospace; font-size:10px; color:var(--parchment-dim); opacity:0.6; }
+  #date-filter-presets{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
+  #date-filter-presets .btn{ font-size:11px; padding:5px 10px; }
+  #date-filter-status{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.7; margin-top:8px; }
+
   .photo-pin{ width:28px; height:28px; }
   .photo-pin-inner{
     width:28px; height:28px; border-radius:50%;
@@ -246,6 +253,81 @@
   #linked-photos{ display:flex; gap:8px; flex-wrap:wrap; }
   #linked-photos img{ width:52px; height:52px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
 
+  #checklist-list{ display:flex; flex-direction:column; gap:2px; }
+  .checklist-item{ display:flex; align-items:center; gap:9px; padding:5px 0; }
+  .checklist-item input[type=checkbox]{ width:16px; height:16px; accent-color:var(--ink); cursor:pointer; flex-shrink:0; }
+  .checklist-item span{ flex:1; font-size:13.5px; color:var(--ink); }
+  .checklist-item.done span{ text-decoration:line-through; opacity:0.5; }
+  .checklist-item button{
+    background:none; border:none; cursor:pointer; color:var(--ink-soft); opacity:0.4; font-size:14px; padding:2px 4px;
+  }
+  .checklist-item button:hover{ opacity:1; }
+  #checklist-add{ display:flex; gap:8px; margin-top:8px; }
+  #checklist-add input{
+    flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:13px;
+    border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:7px 10px; color:var(--ink);
+  }
+  #checklist-add input:focus{ outline:none; border-color:var(--ink-soft); }
+
+  #attachments-grid{ display:flex; flex-wrap:wrap; gap:8px; }
+  .attachment-thumb{ position:relative; width:64px; height:64px; }
+  .attachment-thumb img{ width:64px; height:64px; border-radius:8px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); }
+  .attachment-thumb button{
+    position:absolute; top:-6px; right:-6px; width:18px; height:18px; border-radius:50%;
+    background:var(--history); color:#fff; border:1.5px solid var(--parchment); font-size:11px; line-height:1;
+    cursor:pointer; display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  #attachments-add{ margin-top:8px; }
+  #save-first-note{ font-size:12.5px; color:var(--ink-soft); opacity:0.7; font-style:italic; }
+
+  #attachment-viewer{
+    position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75);
+    display:none; align-items:center; justify-content:center;
+  }
+  #attachment-viewer.open{ display:flex; }
+  #attachment-viewer-inner{
+    background:var(--parchment); border-radius:14px; padding:16px; max-width:88vw; max-height:86vh; overflow:auto;
+    box-shadow:0 16px 40px rgba(0,0,0,0.5);
+  }
+  #attachment-viewer-img{ max-width:80vw; max-height:74vh; display:block; border-radius:8px; }
+  #attachment-viewer-actions{ display:flex; justify-content:flex-end; gap:10px; margin-top:12px; }
+
+  @media (max-width: 700px){
+    input, textarea, select{ font-size:16px !important; }
+
+    #header{
+      flex-direction:column; align-items:stretch; gap:8px; padding:12px;
+    }
+    #brand{ justify-content:space-between; }
+    #brand h1{ font-size:19px; }
+    #header-right{ flex-wrap:wrap; width:100%; gap:6px; }
+    .pill-btn{ padding:9px 12px; font-size:12px; touch-action:manipulation; }
+
+    #hint{ top:auto; bottom:16px; left:50%; font-size:13px; padding:8px 14px; max-width:88vw; text-align:center; }
+
+    #sidebar{
+      top:auto; left:0; right:0; bottom:0; width:100%; max-height:55vh;
+      border-radius:16px 16px 0 0; transform:translateY(0); transition:transform 0.25s ease;
+    }
+    #sidebar.hidden{ transform:translateY(100%); opacity:1; }
+
+    #photo-panel{
+      top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh;
+      border-radius:16px 16px 0 0; overflow-y:auto;
+    }
+
+    #drawer{
+      top:auto; right:0; left:0; bottom:0; width:100%; max-height:88vh;
+      border-radius:16px 16px 0 0; transform:translateY(100%);
+    }
+    #drawer.open{ transform:translateY(0); }
+
+    #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
+
+    .checklist-item input[type=checkbox]{ width:20px; height:20px; }
+    .attachment-thumb, .attachment-thumb img{ width:72px; height:72px; }
+    .unlocated-row img{ width:38px; height:38px; }
+  }
 </style>
 </head>
 <body>
@@ -286,6 +368,18 @@
       <button class="btn primary" id="btn-check-photos">Check for new photos</button>
     </div>
     <div id="unlocated-list"></div>
+    <div class="field-label" style="margin-top:16px;">Filter by date taken</div>
+    <div id="date-filter-row">
+      <input id="photo-date-from" type="date">
+      <span>to</span>
+      <input id="photo-date-to" type="date">
+    </div>
+    <div id="date-filter-presets">
+      <button class="btn small" data-range="year">This year</button>
+      <button class="btn small" data-range="12m">Last 12 months</button>
+      <button class="btn small" data-range="all">All time</button>
+    </div>
+    <div id="date-filter-status"></div>
   </div>
 
   <div id="photo-viewer">
@@ -297,6 +391,16 @@
       <div id="photo-viewer-actions">
         <button class="btn" id="photo-viewer-close">Close</button>
         <button class="btn danger" id="photo-remove">Remove photo</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="attachment-viewer">
+    <div id="attachment-viewer-inner">
+      <img id="attachment-viewer-img">
+      <div id="attachment-viewer-actions">
+        <button class="btn" id="attachment-viewer-close">Close</button>
+        <button class="btn danger" id="attachment-remove">Remove</button>
       </div>
     </div>
   </div>
@@ -330,6 +434,21 @@
       </div>
       <div class="field-label" id="linked-photos-label" style="display:none">Linked photos</div>
       <div id="linked-photos"></div>
+      <div id="richer-content" style="display:none">
+        <div class="field-label">Checklist</div>
+        <div id="checklist-list"></div>
+        <div id="checklist-add">
+          <input id="checklist-input" type="text" placeholder="Add an item and press Enter">
+          <button class="btn small" id="btn-checklist-add">Add</button>
+        </div>
+        <div class="field-label">Photos & scanned pages</div>
+        <div id="attachments-grid"></div>
+        <div id="attachments-add">
+          <input type="file" id="attachment-file" accept="image/*" multiple style="display:none">
+          <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
+        </div>
+      </div>
+      <div id="save-first-note" style="display:none">Save this waypoint to add a checklist or photos.</div>
       <div id="drawer-actions">
         <button class="btn danger" id="btn-delete">Delete</button>
         <button class="btn" id="btn-cancel">Cancel</button>
@@ -441,11 +560,15 @@ function extractFolderId(input){
 function setPhotoStatus(text){ document.getElementById('photo-status').textContent = text; }
 
 const map = L.map('map', {
-  zoomControl:true,
+  zoomControl: window.matchMedia('(max-width: 700px)').matches ? false : true,
   attributionControl:true,
   maxZoom:18,
   maxBoundsViscosity:1.0,
 }).fitBounds(UK_IRELAND_BOUNDS);
+
+if(window.matchMedia('(max-width: 700px)').matches){
+  L.control.zoom({ position:'bottomright' }).addTo(map);
+}
 
 const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© OpenStreetMap contributors',
@@ -522,22 +645,33 @@ function dmsToDecimal(dms, ref){
   return dec;
 }
 
-function extractGps(blob){
+function parseExifDate(str){
+  if(!str) return null;
+  const m = str.match(/(\d{4}):(\d{2}):(\d{2}) (\d{2}):(\d{2}):(\d{2})/);
+  if(!m) return null;
+  const d = new Date(+m[1], +m[2]-1, +m[3], +m[4], +m[5], +m[6]);
+  return isNaN(d.getTime()) ? null : d.getTime();
+}
+
+function extractPhotoMeta(blob){
   return new Promise((resolve)=>{
-    if(typeof EXIF === 'undefined'){ resolve(null); return; }
+    if(typeof EXIF === 'undefined'){ resolve({ lat:null, lng:null, takenAt:null }); return; }
     try{
       EXIF.getData(blob, function(){
         const latDms = EXIF.getTag(this, 'GPSLatitude');
         const latRef = EXIF.getTag(this, 'GPSLatitudeRef');
         const lngDms = EXIF.getTag(this, 'GPSLongitude');
         const lngRef = EXIF.getTag(this, 'GPSLongitudeRef');
-        if(!latDms || !lngDms){ resolve(null); return; }
-        const lat = dmsToDecimal(latDms, latRef);
-        const lng = dmsToDecimal(lngDms, lngRef);
-        if(!Number.isFinite(lat) || !Number.isFinite(lng)){ resolve(null); return; }
-        resolve({ lat, lng });
+        const lat = latDms ? dmsToDecimal(latDms, latRef) : null;
+        const lng = lngDms ? dmsToDecimal(lngDms, lngRef) : null;
+        const takenAt = parseExifDate(EXIF.getTag(this, 'DateTimeOriginal') || EXIF.getTag(this, 'DateTime'));
+        resolve({
+          lat: Number.isFinite(lat) ? lat : null,
+          lng: Number.isFinite(lng) ? lng : null,
+          takenAt,
+        });
       });
-    }catch(e){ resolve(null); }
+    }catch(e){ resolve({ lat:null, lng:null, takenAt:null }); }
   });
 }
 
@@ -660,6 +794,8 @@ function openDrawer(id, isNew, latlng){
     refreshGpxUi(false);
     document.getElementById('linked-photos').innerHTML = '';
     document.getElementById('linked-photos-label').style.display = 'none';
+    document.getElementById('richer-content').style.display = 'none';
+    document.getElementById('save-first-note').style.display = 'block';
   } else {
     pendingId = id;
     const t = trips.find(tr=>tr.id===id);
@@ -671,6 +807,12 @@ function openDrawer(id, isNew, latlng){
     del.style.display = 'inline-block';
     refreshGpxUi(t.hasGpx);
     renderLinkedPhotos(t.id);
+    document.getElementById('richer-content').style.display = 'block';
+    document.getElementById('save-first-note').style.display = 'none';
+    t.checklist = t.checklist || [];
+    t.attachments = t.attachments || [];
+    renderChecklist(t);
+    renderAttachments(t);
   }
   drawer.classList.add('open');
   document.getElementById('save-hint').textContent='';
@@ -812,14 +954,15 @@ async function checkForNewPhotos(){
     const newFiles = files.filter(f=>!existingIds.has(f.id));
     for(const f of newFiles){
       const blob = await driveDownloadFile(f.id, token);
-      const gps = await extractGps(blob);
+      const meta = await extractPhotoMeta(blob);
       await idbPut(f.id, blob);
-      const photo = { id:f.id, name:f.name, lat: gps ? gps.lat : null, lng: gps ? gps.lng : null, importedAt: Date.now(), linkedTripId: null };
+      const photo = { id:f.id, name:f.name, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null };
       photos.push(photo);
-      if(gps) addPhotoMarker(photo);
+      if(photo.lat && photo.lng) addPhotoMarker(photo);
     }
     persistPhotos();
     renderUnlocatedList();
+    applyPhotoDateFilter();
     setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now.`);
   }catch(e){
     setPhotoStatus("Couldn't reach Google Drive. Try Save folder again, or reconnect.");
@@ -874,6 +1017,113 @@ document.getElementById('photo-remove').onclick = async ()=>{
   viewerPhotoId = null;
 };
 
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
+
+function renderChecklist(trip){
+  const box = document.getElementById('checklist-list');
+  box.innerHTML = '';
+  (trip.checklist || []).forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'checklist-item' + (item.done ? ' done' : '');
+    row.innerHTML = `<input type="checkbox" ${item.done?'checked':''}><span>${escapeHtml(item.text)}</span><button aria-label="Remove">✕</button>`;
+    row.querySelector('input').onchange = (e)=>{
+      item.done = e.target.checked;
+      storageSet('trips', JSON.stringify(trips));
+      row.classList.toggle('done', item.done);
+    };
+    row.querySelector('button').onclick = ()=>{
+      trip.checklist = trip.checklist.filter(i=>i.id!==item.id);
+      storageSet('trips', JSON.stringify(trips));
+      renderChecklist(trip);
+    };
+    box.appendChild(row);
+  });
+}
+
+function addChecklistItem(trip){
+  const input = document.getElementById('checklist-input');
+  const text = input.value.trim();
+  if(!text) return;
+  trip.checklist = trip.checklist || [];
+  trip.checklist.push({ id:genId(), text, done:false });
+  storageSet('trips', JSON.stringify(trips));
+  input.value = '';
+  renderChecklist(trip);
+}
+
+async function renderAttachments(trip){
+  const grid = document.getElementById('attachments-grid');
+  grid.innerHTML = '';
+  for(const att of (trip.attachments || [])){
+    const blob = await idbGet(att.id);
+    const wrap = document.createElement('div');
+    wrap.className = 'attachment-thumb';
+    const img = document.createElement('img');
+    img.src = blob ? URL.createObjectURL(blob) : '';
+    img.onclick = ()=> openAttachmentViewer(trip, att.id);
+    const del = document.createElement('button');
+    del.textContent = '✕';
+    del.setAttribute('aria-label','Remove');
+    del.onclick = (e)=>{ e.stopPropagation(); removeAttachment(trip, att.id); };
+    wrap.appendChild(img);
+    wrap.appendChild(del);
+    grid.appendChild(wrap);
+  }
+}
+
+async function addAttachmentFiles(trip, files){
+  trip.attachments = trip.attachments || [];
+  for(const file of files){
+    const id = 'att_' + genId();
+    await idbPut(id, file);
+    trip.attachments.push({ id, name:file.name });
+  }
+  storageSet('trips', JSON.stringify(trips));
+  renderAttachments(trip);
+}
+
+async function removeAttachment(trip, id){
+  trip.attachments = (trip.attachments || []).filter(a=>a.id!==id);
+  await idbDelete(id);
+  storageSet('trips', JSON.stringify(trips));
+  renderAttachments(trip);
+}
+
+let viewerAttachment = null;
+async function openAttachmentViewer(trip, id){
+  viewerAttachment = { trip, id };
+  const blob = await idbGet(id);
+  document.getElementById('attachment-viewer-img').src = blob ? URL.createObjectURL(blob) : '';
+  document.getElementById('attachment-viewer').classList.add('open');
+}
+document.getElementById('attachment-viewer-close').onclick = ()=>{
+  document.getElementById('attachment-viewer').classList.remove('open');
+  viewerAttachment = null;
+};
+document.getElementById('attachment-remove').onclick = async ()=>{
+  if(!viewerAttachment) return;
+  await removeAttachment(viewerAttachment.trip, viewerAttachment.id);
+  document.getElementById('attachment-viewer').classList.remove('open');
+  viewerAttachment = null;
+};
+
+document.getElementById('btn-checklist-add').onclick = ()=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  if(t) addChecklistItem(t);
+};
+document.getElementById('checklist-input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    const t = trips.find(tr=>tr.id===currentId);
+    if(t) addChecklistItem(t);
+  }
+});
+document.getElementById('btn-attachment-add').onclick = ()=> document.getElementById('attachment-file').click();
+document.getElementById('attachment-file').onchange = (e)=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  if(t && e.target.files.length) addAttachmentFiles(t, Array.from(e.target.files));
+  e.target.value = '';
+};
+
 function renderLinkedPhotos(tripId){
   const box = document.getElementById('linked-photos');
   const label = document.getElementById('linked-photos-label');
@@ -894,7 +1144,54 @@ async function loadPhotoMarkers(){
     if(p.lat && p.lng) await addPhotoMarker(p);
   }
   renderUnlocatedList();
+  applyPhotoDateFilter();
 }
+
+function applyPhotoDateFilter(){
+  const fromVal = document.getElementById('photo-date-from').value;
+  const toVal = document.getElementById('photo-date-to').value;
+  const fromTs = fromVal ? new Date(fromVal + 'T00:00:00').getTime() : -Infinity;
+  const toTs = toVal ? new Date(toVal + 'T23:59:59').getTime() : Infinity;
+  let shown = 0, total = 0;
+  photos.forEach(p=>{
+    if(!p.lat || !p.lng) return;
+    total++;
+    const ts = p.takenAt || p.importedAt;
+    const inRange = ts >= fromTs && ts <= toTs;
+    const marker = photoMarkers[p.id];
+    if(!marker) return;
+    const isShown = photoClusterGroup.hasLayer(marker);
+    if(inRange && !isShown) photoClusterGroup.addLayer(marker);
+    if(!inRange && isShown) photoClusterGroup.removeLayer(marker);
+    if(inRange) shown++;
+  });
+  const status = document.getElementById('date-filter-status');
+  if(!fromVal && !toVal) status.textContent = `Showing all ${total} located photos.`;
+  else status.textContent = `Showing ${shown} of ${total} located photos.`;
+}
+
+document.getElementById('photo-date-from').addEventListener('change', applyPhotoDateFilter);
+document.getElementById('photo-date-to').addEventListener('change', applyPhotoDateFilter);
+
+document.querySelectorAll('#date-filter-presets button').forEach(btn=>{
+  btn.onclick = ()=>{
+    const range = btn.dataset.range;
+    const today = new Date();
+    const toStr = today.toISOString().slice(0,10);
+    if(range === 'year'){
+      document.getElementById('photo-date-from').value = `${today.getFullYear()}-01-01`;
+      document.getElementById('photo-date-to').value = toStr;
+    } else if(range === '12m'){
+      const past = new Date(today); past.setFullYear(past.getFullYear() - 1);
+      document.getElementById('photo-date-from').value = past.toISOString().slice(0,10);
+      document.getElementById('photo-date-to').value = toStr;
+    } else {
+      document.getElementById('photo-date-from').value = '';
+      document.getElementById('photo-date-to').value = '';
+    }
+    applyPhotoDateFilter();
+  };
+});
 
 document.getElementById('btn-photos').onclick = ()=>{
   document.getElementById('photo-panel').classList.toggle('open');
@@ -977,7 +1274,7 @@ document.getElementById('btn-save').onclick = async ()=>{
 
   let hasGpx = false;
   if(isNewPin){
-    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), hasGpx:false };
+    const trip = { id:pendingId, lat, lng, title, notes, category, created:Date.now(), hasGpx:false, checklist:[], attachments:[] };
     trips.push(trip);
     addMarker(trip);
     if(pendingGpxAction==='add'){
@@ -1033,14 +1330,23 @@ map.on('click', (e)=>{
   openDrawer(null, true, e.latlng);
 });
 
-document.getElementById('btn-export').onclick = ()=>{
-  const bundle = { trips, gpx:{} };
-  trips.forEach(t=>{
+document.getElementById('btn-export').onclick = async ()=>{
+  const bundle = { trips, gpx:{}, attachments:{} };
+  for(const t of trips){
     if(t.hasGpx){
       const g = storageGet('gpx:' + t.id);
       if(g) bundle.gpx[t.id] = g.value;
     }
-  });
+    for(const att of (t.attachments || [])){
+      const blob = await idbGet(att.id);
+      if(!blob) continue;
+      bundle.attachments[att.id] = await new Promise(res=>{
+        const r = new FileReader();
+        r.onload = ()=> res(r.result);
+        r.readAsDataURL(blob);
+      });
+    }
+  }
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -1054,17 +1360,24 @@ document.getElementById('import-file').onchange = (e)=>{
   const file = e.target.files[0];
   if(!file) return;
   const reader = new FileReader();
-  reader.onload = ()=>{
+  reader.onload = async ()=>{
     try{
       const bundle = JSON.parse(reader.result);
       if(!Array.isArray(bundle.trips)) throw new Error('bad file');
       if(!confirm(`Import ${bundle.trips.length} waypoint(s)? This adds to what you already have.`)) return;
-      bundle.trips.forEach(t=>{
+      for(const t of bundle.trips){
         if(trips.some(existing=>existing.id===t.id)) t.id = 'w' + Date.now() + Math.random().toString(36).slice(2,6);
         trips.push(t);
         addMarker(t);
         if(t.hasGpx && bundle.gpx && bundle.gpx[t.id]) storageSet('gpx:' + t.id, bundle.gpx[t.id]);
-      });
+        for(const att of (t.attachments || [])){
+          if(bundle.attachments && bundle.attachments[att.id]){
+            const r = await fetch(bundle.attachments[att.id]);
+            const blob = await r.blob();
+            await idbPut(att.id, blob);
+          }
+        }
+      }
       storageSet('trips', JSON.stringify(trips));
       applyFilters();
       renderList();
