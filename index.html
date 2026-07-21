@@ -354,7 +354,7 @@
       <video id="photo-viewer-video" controls style="display:none; width:100%; border-radius:8px; margin-bottom:12px;"></video>
       <div id="photo-viewer-name"></div>
       <div id="photo-location-set">
-        <div class="field-label">Location</div>
+        <div class="field-label" id="photo-location-label">Location</div>
         <input id="photo-location-input" type="text" placeholder="55.699391, -4.904652">
         <div id="photo-location-hint"></div>
         <button class="btn small" id="btn-photo-set-location">Set location</button>
@@ -1791,18 +1791,25 @@ function openPhotoViewer(id){
   document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt);
   populateLinkSelect(p.linkedTripId);
 
-  const needsLocation = isOwner && (!p.lat || !p.lng);
-  document.getElementById('photo-location-set').style.display = needsLocation ? 'block' : 'none';
-  if(needsLocation){
-    const match = findSameDayLocation(p);
+  const hasLocation = !!(p.lat && p.lng);
+  document.getElementById('photo-location-set').style.display = isOwner ? 'block' : 'none';
+  document.getElementById('photo-location-label').textContent = hasLocation ? 'Location' : 'Location (not set)';
+  document.getElementById('btn-photo-set-location').textContent = hasLocation ? 'Update location' : 'Set location';
+  if(isOwner){
     const input = document.getElementById('photo-location-input');
     const hint = document.getElementById('photo-location-hint');
-    if(match){
-      input.value = `${match.lat.toFixed(6)}, ${match.lng.toFixed(6)}`;
-      hint.textContent = `Suggested from "${match.name}", taken the same day — edit if that's not right.`;
+    if(hasLocation){
+      input.value = `${p.lat.toFixed(6)}, ${p.lng.toFixed(6)}`;
+      hint.textContent = 'Edit and click Update location to move this pin.';
     } else {
-      input.value = '';
-      hint.textContent = 'No same-day photo found nearby — paste coordinates manually.';
+      const match = findSameDayLocation(p);
+      if(match){
+        input.value = `${match.lat.toFixed(6)}, ${match.lng.toFixed(6)}`;
+        hint.textContent = `Suggested from "${match.name}", taken the same day — edit if that's not right.`;
+      } else {
+        input.value = '';
+        hint.textContent = 'No same-day photo found nearby — paste coordinates manually.';
+      }
     }
   }
   document.getElementById('photo-viewer').classList.add('open');
@@ -1817,11 +1824,15 @@ document.getElementById('btn-photo-set-location').onclick = ()=>{
     return;
   }
   p.lat = parts[0]; p.lng = parts[1];
-  addPhotoMarker(p);
+  if(photoMarkers[p.id]){
+    photoMarkers[p.id].setLatLng([p.lat, p.lng]);
+  } else {
+    addPhotoMarker(p);
+  }
   scheduleCloudSave();
   renderUnlocatedList();
   applyPhotoDateFilter();
-  document.getElementById('photo-location-set').style.display = 'none';
+  document.getElementById('photo-location-hint').textContent = 'Location updated.';
 };
 document.getElementById('photo-viewer-close').onclick = ()=>{
   document.getElementById('photo-viewer').classList.remove('open');
