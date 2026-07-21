@@ -912,7 +912,7 @@ document.getElementById('btn-check-photos').onclick = checkForNewPhotos;
 
 if(driveFolderId) document.getElementById('f-folder-id').value = driveFolderId;
 
-
+document.getElementById('btn-gpx-upload').onclick = ()=> document.getElementById('gpx-file').click();
 
 document.getElementById('gpx-file').onchange = (e)=>{
   const file = e.target.files[0];
