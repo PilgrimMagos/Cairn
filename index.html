@@ -717,6 +717,7 @@ function openDrawer(id, isNew, latlng){
   pendingGpxAction = null;
   pendingGpxText = null;
   document.getElementById('gpx-file').value = '';
+  document.getElementById('coord-sub').textContent = "Paste straight from Google Maps: latitude, longitude";
   const drawer = document.getElementById('drawer');
   setDrawerOwnerState();
   if(isNew){
@@ -804,6 +805,10 @@ document.getElementById('gpx-file').onchange = (e)=>{
     pendingGpxAction = 'add';
     pendingGpxText = reader.result;
     refreshGpxUi(true);
+    const coordsField = document.getElementById('f-coords');
+    coordsField.value = `${coords[0][0].toFixed(6)}, ${coords[0][1].toFixed(6)}`;
+    coordsField.classList.remove('invalid');
+    document.getElementById('coord-sub').textContent = 'Set from the start of the GPX route — edit if you\'d like it elsewhere.';
   };
   reader.readAsText(file);
 };
