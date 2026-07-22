@@ -4,6 +4,14 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Cairn — a map of trips worth taking</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1e1c">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Cairn">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.css">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.markercluster/1.5.3/MarkerCluster.Default.css">
@@ -26,6 +34,12 @@
   .leaflet-control-zoom a{ background:var(--parchment) !important; color:var(--ink) !important; border-color:var(--parchment-line) !important; }
   .mile-tooltip{ background:var(--ink) !important; color:var(--parchment) !important; border:none !important; box-shadow:none !important; border-radius:10px; font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500; padding:1px 6px; }
   .mile-tooltip::before{ display:none; }
+  @keyframes markerPulseRing{
+    0%{ box-shadow:0 0 0 0 rgba(201,152,42,0.75); }
+    70%{ box-shadow:0 0 0 22px rgba(201,152,42,0); }
+    100%{ box-shadow:0 0 0 0 rgba(201,152,42,0); }
+  }
+  .marker-pulse{ animation:markerPulseRing 0.85s ease-out 2; border-radius:50%; }
 
   #header{ position:absolute; top:0; left:0; right:0; z-index:1000; display:flex; align-items:center; justify-content:space-between; padding:18px 22px; pointer-events:none; }
   #brand{ display:flex; align-items:center; gap:10px; pointer-events:auto; }
@@ -218,7 +232,11 @@
   #photo-viewer.fullbleed #photo-viewer-img, #attachment-viewer.fullbleed #attachment-viewer-img{
     display:block !important; width:auto; height:auto; max-width:96vw; max-height:94vh; margin:0; border-radius:4px; cursor:zoom-out;
   }
-  #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:14px; }
+  #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:6px; }
+  #photo-viewer-folder{
+    display:inline-flex; font-family:'IBM Plex Mono', monospace; font-size:11px; font-weight:500;
+    color:#fff; background:var(--town); padding:4px 11px; border-radius:20px; margin-bottom:14px;
+  }
   #photo-link-select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
   #photo-location-set{ display:none; margin-bottom:14px; }
   #photo-location-input{ width:100%; font-family:'IBM Plex Mono', monospace; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); margin-bottom:6px; }
@@ -301,11 +319,11 @@
     #weather-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #improvements-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #drawer{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:52vh; border-radius:16px 16px 0 0; transform:translateY(100%); }
-    #drawer.peek{ transform:translateY(calc(100% - 68px)); }
     #drawer-handle{ display:block; width:36px; height:4px; border-radius:2px; background:rgba(15,30,28,0.25); margin:10px auto 4px; cursor:pointer; flex-shrink:0; }
     #drawer.peek #drawer-inner{ overflow:hidden; }
     #btn-drawer-minimize{ display:inline-flex; }
     #drawer.open{ transform:translateY(0); }
+    #drawer.open.peek{ transform:translateY(calc(100% - 68px)); }
     #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
     .checklist-item input[type=checkbox]{ width:20px; height:20px; }
     .unlocated-row img{ width:38px; height:38px; }
@@ -337,6 +355,7 @@
       <button class="pill-btn" id="toggle-bathymetry">Depths</button>
       <button class="pill-btn" id="toggle-weather">Weather</button>
       <button class="pill-btn" id="toggle-sidebar">List</button>
+      <button class="pill-btn" id="btn-refresh-app">Refresh app</button>
       <button class="pill-btn" id="btn-export">Export backup</button>
       <button class="pill-btn owner-only" id="btn-import">Import backup</button>
       <input type="file" id="import-file" accept=".json" style="display:none">
@@ -402,6 +421,7 @@
       <img id="photo-viewer-img">
       <video id="photo-viewer-video" controls style="display:none; width:100%; border-radius:8px; margin-bottom:12px;"></video>
       <div id="photo-viewer-name"></div>
+      <div id="photo-viewer-folder" style="display:none"></div>
       <div id="photo-location-set">
         <div class="field-label" id="photo-location-label">Location</div>
         <input id="photo-location-input" type="text" placeholder="55.699391, -4.904652">
@@ -1572,6 +1592,7 @@ document.getElementById('drawer-handle').onclick = togglePeek;
 document.getElementById('btn-drawer-minimize').onclick = togglePeek;
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer').classList.remove('peek');
   currentId = null; pendingId = null; isNewPin = false;
   pendingGpxAction = null; pendingGpxText = null;
   clearRoute();
@@ -1900,14 +1921,26 @@ function openAttachmentViewer(trip, id){
 document.getElementById('attachment-viewer-img').onclick = ()=>{
   document.getElementById('attachment-viewer').classList.toggle('fullbleed');
 };
+function pulseMarkerIcon(marker){
+  if(!marker || !marker.getElement) return;
+  const el = marker.getElement();
+  if(!el) return;
+  el.classList.remove('marker-pulse');
+  void el.offsetWidth;
+  el.classList.add('marker-pulse');
+  setTimeout(()=> el.classList.remove('marker-pulse'), 1800);
+}
+
 document.getElementById('btn-attachment-show-in-map').onclick = ()=>{
   if(!viewerAttachment) return;
   const t = viewerAttachment.trip;
   document.getElementById('attachment-viewer').classList.remove('open');
   document.getElementById('gallery-screen').classList.remove('open');
   releaseVideoPlayer(document.getElementById('attachment-viewer-video'));
-  map.flyTo([t.lat, t.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
   openDrawer(t.id, false);
+  map.flyTo([t.lat, t.lng], Math.max(map.getZoom(), 13), { duration:0.6 });
+  const marker = markers[t.id];
+  if(marker) map.once('moveend', ()=> pulseMarkerIcon(marker));
 };
 document.getElementById('attachment-viewer-close').onclick = ()=>{
   document.getElementById('attachment-viewer').classList.remove('open');
@@ -2139,7 +2172,10 @@ function openPhotoViewer(id){
   document.getElementById('photo-viewer-video').style.display = isVideo ? 'block' : 'none';
   if(isVideo){ loadVideoIntoPlayer(document.getElementById('photo-viewer-video'), id); }
   else{ document.getElementById('photo-viewer-img').src = publicFileUrl(id); }
-  document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt) + (p.folderName ? ' · ' + p.folderName : '');
+  document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt);
+  const folderBadge = document.getElementById('photo-viewer-folder');
+  if(p.folderName){ folderBadge.textContent = p.folderName; folderBadge.style.display = 'inline-flex'; }
+  else{ folderBadge.style.display = 'none'; }
   populateLinkSelect(p.linkedTripId);
 
   const hasLocation = !!(p.lat && p.lng);
@@ -2195,7 +2231,13 @@ document.getElementById('btn-photo-show-in-map').onclick = ()=>{
   document.getElementById('photo-viewer').classList.remove('open');
   document.getElementById('gallery-screen').classList.remove('open');
   releaseVideoPlayer(document.getElementById('photo-viewer-video'));
-  map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
+  const marker = photoMarkers[p.id];
+  if(marker && photoClusterGroup.hasLayer(marker)){
+    photoClusterGroup.zoomToShowLayer(marker, ()=> pulseMarkerIcon(marker));
+  } else {
+    map.flyTo([p.lat, p.lng], Math.max(map.getZoom(), 14), { duration:0.6 });
+    if(marker) map.once('moveend', ()=> pulseMarkerIcon(marker));
+  }
 };
 document.getElementById('photo-viewer-close').onclick = ()=>{
   document.getElementById('photo-viewer').classList.remove('open');
@@ -2620,6 +2662,22 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
+
+document.getElementById('btn-refresh-app').onclick = async ()=>{
+  const btn = document.getElementById('btn-refresh-app');
+  btn.textContent = 'Refreshing…';
+  try{
+    if('caches' in window){
+      const names = await caches.keys();
+      await Promise.all(names.map(n=>caches.delete(n)));
+    }
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  location.reload();
+};
 
 async function boot(){
   updateOnlineStatus();
