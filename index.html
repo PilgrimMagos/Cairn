@@ -89,6 +89,8 @@
   #drawer.open{ transform:translateX(0); }
   #drawer-inner{ padding:24px 24px 20px; overflow-y:auto; flex:1; display:flex; flex-direction:column; }
   #drawer-close{ align-self:flex-end; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65; }
+  #drawer-top-row{ display:flex; justify-content:flex-end; gap:14px; margin-bottom:8px; }
+  #btn-drawer-minimize{ display:none; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; opacity:0.65; align-items:center; gap:4px; }
   #drawer-close:hover{ opacity:1; }
   .field-label{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); opacity:0.7; margin:16px 0 6px; }
   .field-label:first-of-type{ margin-top:0; }
@@ -139,6 +141,23 @@
   #save-hint{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--ink-soft); opacity:0.55; margin-top:10px; text-align:center; height:14px; }
 
   #photo-panel{ position:absolute; top:66px; right:16px; z-index:900; width:300px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; }
+  #improvements-panel{ position:absolute; top:66px; right:16px; z-index:900; width:280px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; color:var(--parchment); }
+  #improvements-panel.open{ display:block; }
+  #improvements-panel h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 12px; color:var(--parchment); }
+  #improvements-list{ display:flex; flex-direction:column; gap:2px; max-height:260px; overflow-y:auto; margin-bottom:10px; }
+  .improvement-item{ display:flex; align-items:flex-start; gap:8px; padding:6px 0; border-top:1px solid rgba(250,243,224,0.1); }
+  .improvement-item:first-child{ border-top:none; }
+  .improvement-item span{ flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:12.5px; color:var(--parchment); line-height:1.4; }
+  .improvement-item button{ background:none; border:none; cursor:pointer; color:var(--parchment-dim); opacity:0.5; font-size:13px; padding:2px 4px; flex-shrink:0; }
+  .improvement-item button:hover{ opacity:1; }
+  #improvements-add{ display:flex; gap:8px; }
+  #improvement-input{
+    flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:12.5px;
+    background:rgba(250,243,224,0.08); border:1px solid rgba(250,243,224,0.25); border-radius:8px;
+    padding:7px 10px; color:var(--parchment);
+  }
+  #improvements-add .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
+
   #weather-panel{ position:absolute; top:66px; right:16px; z-index:900; width:280px; background:rgba(15,30,28,0.95); border:1px solid rgba(250,243,224,0.16); border-radius:14px; backdrop-filter: blur(8px); padding:16px; display:none; color:var(--parchment); }
   #weather-panel.open{ display:block; }
   #weather-panel h2{ font-family:'Fraunces', serif; font-weight:500; font-size:15px; margin:0 0 12px; color:var(--parchment); }
@@ -185,12 +204,20 @@
   .photo-cluster-inner svg{ width:15px; height:15px; stroke:var(--parchment); }
   .photo-cluster-count{ position:absolute; top:-6px; right:-6px; background:var(--food); color:var(--food-dark); font-family:'IBM Plex Mono', monospace; font-size:10px; font-weight:500; min-width:16px; height:16px; border-radius:8px; padding:0 4px; display:flex; align-items:center; justify-content:center; border:1.5px solid var(--ink); }
 
-  #photo-viewer, #attachment-viewer{ position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75); display:none; align-items:center; justify-content:center; }
+  #photo-viewer, #attachment-viewer{ position:absolute; inset:0; z-index:1300; background:rgba(15,30,28,0.75); display:none; align-items:center; justify-content:center; transition:background 0.2s ease; }
   #photo-viewer.open, #attachment-viewer.open{ display:flex; }
-  #photo-viewer-inner, #attachment-viewer-inner{ background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px; width:420px; max-width:88vw; max-height:86vh; overflow-y:auto; box-shadow:0 16px 40px rgba(0,0,0,0.5); transition:width 0.2s ease; }
-  #photo-viewer-inner.enlarged, #attachment-viewer-inner.enlarged{ width:760px; max-width:94vw; max-height:92vh; }
+  #photo-viewer-inner, #attachment-viewer-inner{ background:var(--parchment); color:var(--ink); border-radius:14px; padding:20px; width:420px; max-width:88vw; max-height:86vh; overflow-y:auto; box-shadow:0 16px 40px rgba(0,0,0,0.5); }
   #photo-viewer-img, #attachment-viewer-img{ cursor:zoom-in; }
   #photo-viewer-img, #attachment-viewer-img{ width:100%; border-radius:8px; display:block; margin-bottom:12px; }
+
+  #photo-viewer.fullbleed, #attachment-viewer.fullbleed{ background:rgba(10,18,17,0.96); }
+  #photo-viewer.fullbleed #photo-viewer-inner, #attachment-viewer.fullbleed #attachment-viewer-inner{
+    background:transparent; box-shadow:none; padding:0; width:auto; max-width:96vw; max-height:94vh; overflow:visible; border-radius:0;
+  }
+  #photo-viewer.fullbleed #photo-viewer-inner > *, #attachment-viewer.fullbleed #attachment-viewer-inner > *{ display:none; }
+  #photo-viewer.fullbleed #photo-viewer-img, #attachment-viewer.fullbleed #attachment-viewer-img{
+    display:block !important; width:auto; height:auto; max-width:96vw; max-height:94vh; margin:0; border-radius:4px; cursor:zoom-out;
+  }
   #photo-viewer-name{ font-family:'Fraunces', serif; font-weight:500; font-size:16px; margin-bottom:14px; }
   #photo-link-select{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
   #photo-location-set{ display:none; margin-bottom:14px; }
@@ -226,11 +253,15 @@
   #gallery-filters{ display:flex; gap:8px; margin-bottom:16px; flex-shrink:0; }
   #gallery-filters .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
   #gallery-filters .btn.active{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
+  #gallery-subheader{ display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-shrink:0; font-family:'Fraunces', serif; font-size:15px; font-style:italic; }
+  #gallery-subheader .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
   #gallery-grid{
     flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; padding-bottom:20px;
   }
-  .gallery-tile{ position:relative; border-radius:10px; overflow:hidden; cursor:pointer; aspect-ratio:1; background:var(--ink-soft); }
-  .gallery-tile img{ width:100%; height:100%; object-fit:cover; display:block; }
+  .gallery-tile{ position:relative; border-radius:10px; overflow:hidden; cursor:pointer; background:var(--ink-soft); }
+  .gallery-tile::before{ content:''; display:block; padding-top:100%; }
+  .gallery-tile img, .gallery-tile .video-thumb{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
+  .gallery-tile img{ display:block; }
   .gallery-tile .video-thumb{ width:100%; height:100%; border-radius:0; font-size:28px; }
   .gallery-tile .tile-caption{
     position:absolute; left:0; right:0; bottom:0; padding:6px 8px;
@@ -270,10 +301,12 @@
     #sidebar.hidden #sidebar-chevron{ transform:rotate(180deg); }
     #photo-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #weather-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
-    #drawer{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:88vh; border-radius:16px 16px 0 0; transform:translateY(100%); }
+    #improvements-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
+    #drawer{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:52vh; border-radius:16px 16px 0 0; transform:translateY(100%); }
     #drawer.peek{ transform:translateY(calc(100% - 68px)); }
     #drawer-handle{ display:block; width:36px; height:4px; border-radius:2px; background:rgba(15,30,28,0.25); margin:10px auto 4px; cursor:pointer; flex-shrink:0; }
     #drawer.peek #drawer-inner{ overflow:hidden; }
+    #btn-drawer-minimize{ display:inline-flex; }
     #drawer.open{ transform:translateY(0); }
     #photo-viewer-inner, #attachment-viewer-inner{ width:92vw; }
     .checklist-item input[type=checkbox]{ width:20px; height:20px; }
@@ -299,6 +332,7 @@
     </div>
     <div id="header-right">
       <button class="pill-btn" id="btn-signin">Sign in</button>
+      <button class="pill-btn owner-only" id="btn-improvements">Improvements</button>
       <button class="pill-btn" id="btn-gallery">Gallery</button>
       <button class="pill-btn" id="btn-photos">Photos</button>
       <button class="pill-btn" id="toggle-all-routes">All routes</button>
@@ -313,6 +347,15 @@
   </div>
 
   <div id="hint">Loading the shared map…</div>
+
+  <div id="improvements-panel">
+    <h2>Improvements</h2>
+    <div id="improvements-list"></div>
+    <div id="improvements-add">
+      <input id="improvement-input" type="text" placeholder="Add an idea and press Enter">
+      <button class="btn small" id="btn-improvement-add">Add</button>
+    </div>
+  </div>
 
   <div id="weather-panel">
     <h2>Weather</h2>
@@ -398,7 +441,9 @@
       <button class="btn small active" data-gfilter="all">All</button>
       <button class="btn small" data-gfilter="location">Location photos</button>
       <button class="btn small" data-gfilter="notes">Notes & scans</button>
+      <button class="btn small" data-gfilter="folders">By folder</button>
     </div>
+    <div id="gallery-subheader" style="display:none"></div>
     <div id="gallery-grid"></div>
   </div>
 
@@ -422,7 +467,10 @@
   <div id="drawer">
     <div id="drawer-handle"></div>
     <div id="drawer-inner">
-      <button id="drawer-close">✕ close</button>
+      <div id="drawer-top-row">
+        <button id="btn-drawer-minimize">▾ minimize</button>
+        <button id="drawer-close">✕ close</button>
+      </div>
       <div class="field-label">Title</div>
       <input id="f-title" placeholder="Name this place">
       <div class="field-label">Category</div>
@@ -581,6 +629,15 @@ async function driveListFolder(folderId, token){
   return data.files || [];
 }
 
+async function driveListSubfolders(folderId, token){
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'`);
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&pageSize=100`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if(!res.ok) throw new Error('subfolder list failed ' + res.status);
+  const data = await res.json();
+  return data.files || [];
+}
+
 async function driveDownloadFile(fileId, token){
   const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, { headers: { Authorization: 'Bearer ' + token } });
   if(!res.ok) throw new Error('download failed ' + res.status);
@@ -696,6 +753,12 @@ async function bootstrapSharedStorage(){
 
 /* ---------- Shared cloud data ---------- */
 
+const DEFAULT_IMPROVEMENTS = [
+  'Look for more detailed depth charts',
+  'Review the weather data source/accuracy against other services',
+];
+let improvements = [];
+
 async function loadCloudData(){
   if(!DATA_FILE_ID){
     document.getElementById('hint').textContent = 'No shared data yet — sign in to set up shared storage.';
@@ -708,10 +771,11 @@ async function loadCloudData(){
     trips = data.trips || [];
     photos = data.photos || [];
     driveFolderId = data.photosFolderId || '';
+    improvements = (data.improvements && data.improvements.length) ? data.improvements : DEFAULT_IMPROVEMENTS.map(text=>({ id:genId(), text }));
     document.getElementById('f-folder-id').value = driveFolderId;
     document.getElementById('hint').textContent = 'Click the map, or use + Add waypoint to type coordinates';
   }catch(e){
-    trips = []; photos = [];
+    trips = []; photos = []; improvements = DEFAULT_IMPROVEMENTS.map(text=>({ id:genId(), text }));
     document.getElementById('hint').textContent = "Couldn't load the shared map right now.";
   }
 }
@@ -725,7 +789,7 @@ async function doCloudSave(){
   if(!isOwner || !DATA_FILE_ID) return;
   const hint = document.getElementById('save-hint');
   try{
-    const blob = new Blob([JSON.stringify({ trips, photos, photosFolderId: driveFolderId })], { type:'application/json' });
+    const blob = new Blob([JSON.stringify({ trips, photos, photosFolderId: driveFolderId, improvements })], { type:'application/json' });
     await driveUpdateFileContent(DATA_FILE_ID, blob, 'application/json');
     hint.textContent = 'saved';
     clearTimeout(saveTimer);
@@ -796,6 +860,11 @@ const baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.pn
   maxZoom: 19,
 }).addTo(map);
 
+const mutedBaseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+  attribution: '© OpenStreetMap contributors, © CARTO',
+  maxZoom: 19,
+});
+
 function lockToUkIreland(){
   const fitZoom = map.getBoundsZoom(UK_IRELAND_BOUNDS, false);
   map.setMinZoom(fitZoom);
@@ -804,6 +873,14 @@ function lockToUkIreland(){
 lockToUkIreland();
 map.on('resize', lockToUkIreland);
 
+const bathymetryGradientLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
+  layers: 'emodnet:mean_multicolour',
+  format: 'image/png',
+  transparent: true,
+  version: '1.1.1',
+  opacity: 0.35,
+  attribution: 'Bathymetry © EMODnet — for planning only, not for navigation',
+});
 const bathymetryLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms', {
   layers: 'contours',
   format: 'image/png',
@@ -815,8 +892,8 @@ const bathymetryLayer = L.tileLayer.wms('https://ows.emodnet-bathymetry.eu/wms',
 let bathymetryOn = false;
 document.getElementById('toggle-bathymetry').onclick = (e)=>{
   bathymetryOn = !bathymetryOn;
-  if(bathymetryOn){ bathymetryLayer.addTo(map); e.target.classList.add('active'); }
-  else{ map.removeLayer(bathymetryLayer); e.target.classList.remove('active'); }
+  if(bathymetryOn){ bathymetryGradientLayer.addTo(map); bathymetryLayer.addTo(map); e.target.classList.add('active'); }
+  else{ map.removeLayer(bathymetryGradientLayer); map.removeLayer(bathymetryLayer); e.target.classList.remove('active'); }
 };
 
 const WEATHER_GRID_COLS = 16;
@@ -844,37 +921,37 @@ function buildWeatherGrid(){
 }
 
 function clamp01(v){ return Math.max(0, Math.min(1, v)); }
-function interpolateStops(stops, t){
-  t = clamp01(t);
-  for(let i=0;i<stops.length-1;i++){
-    const [t0,c0] = stops[i], [t1,c1] = stops[i+1];
-    if(t >= t0 && t <= t1){
-      const f = (t-t0) / ((t1-t0) || 1);
-      return c0.map((v,idx)=> Math.round(v + (c1[idx]-v)*f));
-    }
-  }
-  return stops[stops.length-1][1];
+function bandedColor(fraction, stops){
+  fraction = clamp01(fraction);
+  let color = stops[0][1];
+  for(const [t, c] of stops){ if(fraction >= t) color = c; else break; }
+  return color;
 }
-// Wind: calm (blue) -> breezy (green) -> windy (yellow/orange) -> severe (red/magenta)
+// Wind bands, matching Windy's real mph breakpoints (0/6/10/20/35/45+)
 const WIND_STOPS = [
-  [0,    [90,160,220]],
-  [0.35, [70,165,95]],
-  [0.62, [230,205,55]],
-  [0.82, [230,130,35]],
-  [1,    [185,30,105]],
+  [0,            [61,109,196]],
+  [6/45,         [47,164,160]],
+  [10/45,        [63,174,82]],
+  [20/45,        [200,205,62]],
+  [35/45,        [224,138,62]],
+  [45/45,        [194,62,138]],
 ];
-// Rain chance: dry (near white) -> light blue -> deep blue/purple (very likely)
+// Rain-chance bands (0-100%), same colour family as Windy's precipitation scale
 const RAIN_STOPS = [
-  [0,    [238,242,240]],
-  [0.4,  [150,200,235]],
-  [0.7,  [60,125,205]],
-  [1,    [45,35,145]],
+  [0,    [222,232,232]],
+  [0.20, [150,200,235]],
+  [0.40, [61,164,160]],
+  [0.60, [63,174,82]],
+  [0.80, [224,138,62]],
+  [1.00, [194,62,90]],
 ];
-// Combined suitability: poor (vivid red) -> marginal (vivid yellow) -> good (vivid green)
+// Combined suitability bands: poor -> marginal -> good, distinct steps
 const COMBINED_STOPS = [
-  [0,   [205,35,55]],
-  [0.5, [235,190,30]],
-  [1,   [30,150,70]],
+  [0,    [196,45,55]],
+  [0.35, [214,110,40]],
+  [0.5,  [225,180,35]],
+  [0.65, [150,175,50]],
+  [1.0,  [35,150,70]],
 ];
 
 function windFraction(day){ return clamp01(day.windGust / 45); }
@@ -886,9 +963,9 @@ function combinedGoodness(day){
   return Math.min(w, r);
 }
 function colorForLayer(day, mode){
-  if(mode === 'wind') return interpolateStops(WIND_STOPS, windFraction(day));
-  if(mode === 'rain') return interpolateStops(RAIN_STOPS, rainFraction(day));
-  return interpolateStops(COMBINED_STOPS, combinedGoodness(day));
+  if(mode === 'wind') return bandedColor(windFraction(day), WIND_STOPS);
+  if(mode === 'rain') return bandedColor(rainFraction(day), RAIN_STOPS);
+  return bandedColor(combinedGoodness(day), COMBINED_STOPS);
 }
 
 function renderWeatherGrid(){
@@ -907,15 +984,15 @@ function renderWeatherGrid(){
       const [rr,gg,bb] = day ? colorForLayer(day, weatherLayerMode) : [180,180,180];
       const pxRow = WEATHER_GRID_ROWS - 1 - r; // flip so north is at the top of the image
       const pi = (pxRow*WEATHER_GRID_COLS + c) * 4;
-      imgData.data[pi] = rr; imgData.data[pi+1] = gg; imgData.data[pi+2] = bb; imgData.data[pi+3] = 210;
+      imgData.data[pi] = rr; imgData.data[pi+1] = gg; imgData.data[pi+2] = bb; imgData.data[pi+3] = 225;
     }
   }
   ctx.putImageData(imgData, 0, 0);
-  weatherImageOverlay = L.imageOverlay(canvas.toDataURL(), UK_IRELAND_BOUNDS, { opacity:0.62, interactive:false });
+  weatherImageOverlay = L.imageOverlay(canvas.toDataURL(), UK_IRELAND_BOUNDS, { opacity:0.68, interactive:false });
   if(weatherPanelOn){
     weatherImageOverlay.addTo(map);
     const el = weatherImageOverlay.getElement();
-    if(el){ el.style.filter = 'blur(7px) saturate(1.25)'; el.style.imageRendering = 'auto'; }
+    if(el){ el.style.filter = 'blur(2.5px) saturate(1.3)'; el.style.imageRendering = 'auto'; }
   }
 }
 
@@ -941,20 +1018,64 @@ async function loadWeatherGrid(){
   btn.disabled = false;
 }
 
+function renderImprovements(){
+  const box = document.getElementById('improvements-list');
+  box.innerHTML = '';
+  if(improvements.length === 0){
+    box.innerHTML = '<div style="font-size:12px; opacity:0.6; padding:6px 0;">No ideas yet.</div>';
+    return;
+  }
+  improvements.forEach(item=>{
+    const row = document.createElement('div');
+    row.className = 'improvement-item';
+    row.innerHTML = `<span>${escapeHtml(item.text)}</span><button aria-label="Remove">✕</button>`;
+    row.querySelector('button').onclick = ()=>{
+      improvements = improvements.filter(i=>i.id!==item.id);
+      scheduleCloudSave();
+      renderImprovements();
+    };
+    box.appendChild(row);
+  });
+}
+document.getElementById('btn-improvements').onclick = ()=>{
+  document.getElementById('improvements-panel').classList.toggle('open');
+  renderImprovements();
+};
+function addImprovement(){
+  const input = document.getElementById('improvement-input');
+  const text = input.value.trim();
+  if(!text) return;
+  improvements.push({ id:genId(), text });
+  scheduleCloudSave();
+  input.value = '';
+  renderImprovements();
+}
+document.getElementById('btn-improvement-add').onclick = addImprovement;
+document.getElementById('improvement-input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') addImprovement();
+});
+
 document.getElementById('toggle-weather').onclick = (e)=>{
   weatherPanelOn = !weatherPanelOn;
   document.getElementById('weather-panel').classList.toggle('open', weatherPanelOn);
   e.target.classList.toggle('active', weatherPanelOn);
-  if(weatherPanelOn && weatherGridRaw) renderWeatherGrid();
-  else if(weatherImageOverlay){ map.removeLayer(weatherImageOverlay); weatherImageOverlay = null; }
+  if(weatherPanelOn){
+    map.removeLayer(baseLayer);
+    mutedBaseLayer.addTo(map);
+    if(weatherGridRaw) renderWeatherGrid();
+  } else {
+    map.removeLayer(mutedBaseLayer);
+    baseLayer.addTo(map);
+    if(weatherImageOverlay){ map.removeLayer(weatherImageOverlay); weatherImageOverlay = null; }
+  }
 };
 document.getElementById('btn-load-weather-grid').onclick = loadWeatherGrid;
 function renderWeatherLegend(){
   const el = document.getElementById('weather-legend');
   if(weatherLayerMode === 'wind'){
-    el.innerHTML = '<span><i class="wdot" style="background:rgb(90,160,220)"></i> Calm</span><span><i class="wdot" style="background:rgb(230,205,55)"></i> Breezy</span><span><i class="wdot" style="background:rgb(185,30,105)"></i> Severe</span>';
+    el.innerHTML = '<span><i class="wdot" style="background:rgb(61,109,196)"></i> Calm</span><span><i class="wdot" style="background:rgb(63,174,82)"></i> Breezy</span><span><i class="wdot" style="background:rgb(224,138,62)"></i> Windy</span><span><i class="wdot" style="background:rgb(194,62,138)"></i> Severe</span>';
   } else if(weatherLayerMode === 'rain'){
-    el.innerHTML = '<span><i class="wdot" style="background:rgb(238,242,240);border:1px solid rgba(255,255,255,0.4)"></i> Dry</span><span><i class="wdot" style="background:rgb(60,125,205)"></i> Likely</span><span><i class="wdot" style="background:rgb(45,35,145)"></i> Very likely</span>';
+    el.innerHTML = '<span><i class="wdot" style="background:rgb(222,232,232);border:1px solid rgba(255,255,255,0.4)"></i> Dry</span><span><i class="wdot" style="background:rgb(63,174,82)"></i> Likely</span><span><i class="wdot" style="background:rgb(224,138,62)"></i> Very likely</span><span><i class="wdot" style="background:rgb(194,62,90)"></i> Near-certain</span>';
   } else {
     el.innerHTML = '<span><i class="wdot weather-good"></i> Good</span><span><i class="wdot weather-ok"></i> Marginal</span><span><i class="wdot weather-poor"></i> Poor</span>';
   }
@@ -1437,18 +1558,17 @@ function openDrawer(id, isNew, latlng){
   }
   drawer.classList.add('open');
   drawer.classList.remove('peek');
-  if(!isNew){
-    if(window.matchMedia('(max-width: 700px)').matches){
-      drawer.classList.add('peek');
-    }
-  }
+  document.getElementById('btn-drawer-minimize').textContent = '▾ minimize';
   document.getElementById('save-hint').textContent='';
   if(!drawer.classList.contains('peek')) setTimeout(()=>document.getElementById('f-title').focus(), 200);
   hideHint();
 }
-document.getElementById('drawer-handle').onclick = ()=>{
-  document.getElementById('drawer').classList.toggle('peek');
-};
+function togglePeek(){
+  const peeked = document.getElementById('drawer').classList.toggle('peek');
+  document.getElementById('btn-drawer-minimize').textContent = peeked ? '▴ expand' : '▾ minimize';
+}
+document.getElementById('drawer-handle').onclick = togglePeek;
+document.getElementById('btn-drawer-minimize').onclick = togglePeek;
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   currentId = null; pendingId = null; isNewPin = false;
@@ -1763,7 +1883,7 @@ function releaseVideoPlayer(videoEl){
 let viewerAttachment = null;
 function openAttachmentViewer(trip, id){
   viewerAttachment = { trip, id };
-  document.getElementById('attachment-viewer-inner').classList.remove('enlarged');
+  document.getElementById('attachment-viewer').classList.remove('fullbleed');
   document.getElementById('btn-attachment-show-in-map').style.display = 'inline-block';
   const att = (trip.attachments || []).find(a=>a.id===id);
   const isVideo = att && isVideoType(att.mimeType);
@@ -1777,7 +1897,7 @@ function openAttachmentViewer(trip, id){
   document.getElementById('attachment-viewer').classList.add('open');
 }
 document.getElementById('attachment-viewer-img').onclick = ()=>{
-  document.getElementById('attachment-viewer-inner').classList.toggle('enlarged');
+  document.getElementById('attachment-viewer').classList.toggle('fullbleed');
 };
 document.getElementById('btn-attachment-show-in-map').onclick = ()=>{
   if(!viewerAttachment) return;
@@ -1919,7 +2039,14 @@ async function checkForNewPhotos(){
   try{
     const token = await requestDriveToken();
     setPhotoStatus('Checking for new photos…');
-    const files = await driveListFolder(driveFolderId, token);
+    const rootFiles = (await driveListFolder(driveFolderId, token)).map(f=> ({ ...f, folderName:null }));
+    const subfolders = await driveListSubfolders(driveFolderId, token);
+    let subFiles = [];
+    for(const sf of subfolders){
+      const files = await driveListFolder(sf.id, token);
+      subFiles = subFiles.concat(files.map(f=> ({ ...f, folderName: sf.name })));
+    }
+    const files = rootFiles.concat(subFiles);
     const existingIds = new Set(photos.map(p=> p.sourceId || p.id));
     const newFiles = files.filter(f=>!existingIds.has(f.id));
     let convertedCount = 0;
@@ -1954,7 +2081,7 @@ async function checkForNewPhotos(){
           meta = await extractPhotoMeta(blob);
         }
       }
-      const photo = { id:displayId, sourceId:f.id, name:f.name, mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null, heicOriginalId };
+      const photo = { id:displayId, sourceId:f.id, name:f.name, mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null, heicOriginalId, folderName: f.folderName || null };
       photos.push(photo);
       if(photo.lat && photo.lng) addPhotoMarker(photo);
     }
@@ -1992,13 +2119,13 @@ function openPhotoViewer(id){
   const p = photos.find(ph=>ph.id===id);
   if(!p) return;
   viewerPhotoId = id;
-  document.getElementById('photo-viewer-inner').classList.remove('enlarged');
+  document.getElementById('photo-viewer').classList.remove('fullbleed');
   const isVideo = isVideoType(p.mimeType);
   document.getElementById('photo-viewer-img').style.display = isVideo ? 'none' : 'block';
   document.getElementById('photo-viewer-video').style.display = isVideo ? 'block' : 'none';
   if(isVideo){ loadVideoIntoPlayer(document.getElementById('photo-viewer-video'), id); }
   else{ document.getElementById('photo-viewer-img').src = publicFileUrl(id); }
-  document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt);
+  document.getElementById('photo-viewer-name').textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt) + (p.folderName ? ' · ' + p.folderName : '');
   populateLinkSelect(p.linkedTripId);
 
   const hasLocation = !!(p.lat && p.lng);
@@ -2046,7 +2173,7 @@ document.getElementById('btn-photo-set-location').onclick = ()=>{
   document.getElementById('photo-location-hint').textContent = 'Location updated.';
 };
 document.getElementById('photo-viewer-img').onclick = ()=>{
-  document.getElementById('photo-viewer-inner').classList.toggle('enlarged');
+  document.getElementById('photo-viewer').classList.toggle('fullbleed');
 };
 document.getElementById('btn-photo-show-in-map').onclick = ()=>{
   const p = photos.find(ph=>ph.id===viewerPhotoId);
@@ -2174,6 +2301,7 @@ document.getElementById('btn-cleanup-heic').onclick = cleanupHeicOriginals;
 /* ---------- Gallery ---------- */
 
 let galleryFilter = 'all';
+let gallerySelectedFolder = null;
 
 function collectGalleryItems(){
   const items = [];
@@ -2182,7 +2310,7 @@ function collectGalleryItems(){
     items.push({
       kind:'location', id:p.id, name:p.name, mimeType:p.mimeType,
       date: p.takenAt || p.importedAt, caption: trip ? trip.title : 'Unlinked',
-      lat: p.lat, lng: p.lng,
+      lat: p.lat, lng: p.lng, folderName: p.folderName || null,
       openFn: ()=> openPhotoViewer(p.id),
     });
   });
@@ -2191,7 +2319,7 @@ function collectGalleryItems(){
       items.push({
         kind:'notes', id:a.id, name:a.name, mimeType:a.mimeType,
         date: a.addedAt || t.created, caption: t.title,
-        lat: t.lat, lng: t.lng,
+        lat: t.lat, lng: t.lng, folderName: null,
         openFn: ()=> openAttachmentViewer(t, a.id),
       });
     });
@@ -2199,12 +2327,8 @@ function collectGalleryItems(){
   return items.sort((a,b)=> (b.date||0) - (a.date||0));
 }
 
-function renderGallery(){
+function renderTileGrid(items){
   const grid = document.getElementById('gallery-grid');
-  let items = collectGalleryItems();
-  if(galleryFilter === 'location') items = items.filter(i=>i.kind==='location');
-  if(galleryFilter === 'notes') items = items.filter(i=>i.kind==='notes');
-  document.getElementById('gallery-count').textContent = `${items.length} item${items.length===1?'':'s'}`;
   grid.innerHTML = '';
   if(items.length === 0){
     grid.innerHTML = '<div id="gallery-empty">Nothing here yet.</div>';
@@ -2223,6 +2347,62 @@ function renderGallery(){
   });
 }
 
+function renderFolderTiles(){
+  const grid = document.getElementById('gallery-grid');
+  const locationItems = collectGalleryItems().filter(i=>i.kind==='location');
+  const groups = {};
+  locationItems.forEach(i=>{
+    const key = i.folderName || 'Uncategorized';
+    (groups[key] = groups[key] || []).push(i);
+  });
+  const folderNames = Object.keys(groups).sort();
+  document.getElementById('gallery-count').textContent = `${folderNames.length} folder${folderNames.length===1?'':'s'}`;
+  grid.innerHTML = '';
+  if(folderNames.length === 0){
+    grid.innerHTML = '<div id="gallery-empty">No location photos yet.</div>';
+    return;
+  }
+  folderNames.forEach(name=>{
+    const groupItems = groups[name];
+    const cover = groupItems[0];
+    const tile = document.createElement('div');
+    tile.className = 'gallery-tile';
+    if(isVideoType(cover.mimeType)){
+      tile.innerHTML = `<div class="video-thumb">▶</div><div class="tile-caption">${escapeHtml(name)} · ${groupItems.length}</div>`;
+    } else {
+      tile.innerHTML = `<img src="${publicFileUrl(cover.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(name)} · ${groupItems.length}</div>`;
+    }
+    tile.onclick = ()=>{ gallerySelectedFolder = name; renderGallery(); };
+    grid.appendChild(tile);
+  });
+}
+
+function renderGallery(){
+  const sub = document.getElementById('gallery-subheader');
+  if(galleryFilter === 'folders' && gallerySelectedFolder){
+    sub.style.display = 'flex';
+    sub.innerHTML = `<button class="btn small" id="btn-gallery-back-folders">← All folders</button><span>${escapeHtml(gallerySelectedFolder)}</span>`;
+    document.getElementById('btn-gallery-back-folders').onclick = ()=>{ gallerySelectedFolder = null; renderGallery(); };
+  } else {
+    sub.style.display = 'none';
+    sub.innerHTML = '';
+  }
+
+  if(galleryFilter === 'folders' && !gallerySelectedFolder){
+    renderFolderTiles();
+    return;
+  }
+
+  let items = collectGalleryItems();
+  if(galleryFilter === 'location') items = items.filter(i=>i.kind==='location');
+  if(galleryFilter === 'notes') items = items.filter(i=>i.kind==='notes');
+  if(galleryFilter === 'folders' && gallerySelectedFolder){
+    items = items.filter(i=> i.kind==='location' && (i.folderName || 'Uncategorized') === gallerySelectedFolder);
+  }
+  document.getElementById('gallery-count').textContent = `${items.length} item${items.length===1?'':'s'}`;
+  renderTileGrid(items);
+}
+
 document.getElementById('btn-gallery').onclick = ()=>{
   document.getElementById('gallery-screen').classList.add('open');
   renderGallery();
@@ -2233,6 +2413,7 @@ document.getElementById('btn-gallery-close').onclick = ()=>{
 document.querySelectorAll('#gallery-filters button').forEach(btn=>{
   btn.onclick = ()=>{
     galleryFilter = btn.dataset.gfilter;
+    gallerySelectedFolder = null;
     document.querySelectorAll('#gallery-filters button').forEach(b=> b.classList.toggle('active', b===btn));
     renderGallery();
   };
