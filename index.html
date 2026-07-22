@@ -877,7 +877,7 @@ function scheduleCloudSave(){
 }
 
 async function doCloudSave(){
-  if(!isOwner || !DATA_FILE_ID) return;
+  if(!isOwner || !DATA_FILE_ID) return false;
   const hint = document.getElementById('save-hint');
   try{
     await requestDriveToken();
@@ -886,8 +886,10 @@ async function doCloudSave(){
     hint.textContent = 'saved';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
+    return true;
   }catch(e){
     hint.textContent = 'could not save';
+    return false;
   }
 }
 
@@ -2827,7 +2829,12 @@ document.getElementById('btn-save').onclick = async ()=>{
       markers[currentId].setIcon(makeIcon(category));
     }
 
-    scheduleCloudSave();
+    document.getElementById('save-hint').textContent = 'Saving to Drive…';
+    const saved = await doCloudSave();
+    if(!saved){
+      document.getElementById('save-hint').textContent = "Couldn't save — check your connection and try again.";
+      return;
+    }
     applyFilters();
     renderList();
     refreshAllRoutesIfOn();
@@ -2843,14 +2850,25 @@ document.getElementById('btn-save').onclick = async ()=>{
 document.getElementById('btn-cancel').onclick = ()=> closeDrawer();
 document.getElementById('drawer-close').onclick = ()=> closeDrawer();
 
-document.getElementById('btn-delete').onclick = ()=>{
+document.getElementById('btn-delete').onclick = async ()=>{
   if(!currentId) return;
   const existingTrip = trips.find(tr=>tr.id===currentId);
   if(!canEditTrip(existingTrip)) return;
   if(!confirm('Delete this cairn? This cannot be undone.')) return;
-  trips = trips.filter(tr=>tr.id!==currentId);
-  if(markers[currentId]){ map.removeLayer(markers[currentId]); delete markers[currentId]; }
-  scheduleCloudSave();
+  const deleteBtn = document.getElementById('btn-delete');
+  deleteBtn.disabled = true;
+  document.getElementById('save-hint').textContent = 'Deleting…';
+  const removedId = currentId;
+  trips = trips.filter(tr=>tr.id!==removedId);
+  if(markers[removedId]){ map.removeLayer(markers[removedId]); delete markers[removedId]; }
+  const saved = await doCloudSave();
+  if(!saved){
+    trips.push(existingTrip);
+    addMarker(existingTrip);
+    document.getElementById('save-hint').textContent = "Couldn't delete — check your connection and try again.";
+    deleteBtn.disabled = false;
+    return;
+  }
   renderList();
   refreshAllRoutesIfOn();
   closeDrawer();
