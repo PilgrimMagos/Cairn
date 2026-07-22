@@ -256,12 +256,10 @@
   #gallery-subheader{ display:flex; align-items:center; gap:12px; margin-bottom:12px; flex-shrink:0; font-family:'Fraunces', serif; font-size:15px; font-style:italic; }
   #gallery-subheader .btn{ color:var(--parchment); border-color:rgba(250,243,224,0.3); }
   #gallery-grid{
-    flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); gap:12px; padding-bottom:20px;
+    flex:1; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill, minmax(140px, 1fr)); grid-auto-rows:140px; gap:12px; padding-bottom:20px;
   }
   .gallery-tile{ position:relative; border-radius:10px; overflow:hidden; cursor:pointer; background:var(--ink-soft); }
-  .gallery-tile::before{ content:''; display:block; padding-top:100%; }
-  .gallery-tile img, .gallery-tile .video-thumb{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
-  .gallery-tile img{ display:block; }
+  .gallery-tile img{ width:100%; height:100%; object-fit:cover; display:block; }
   .gallery-tile .video-thumb{ width:100%; height:100%; border-radius:0; font-size:28px; }
   .gallery-tile .tile-caption{
     position:absolute; left:0; right:0; bottom:0; padding:6px 8px;
@@ -1559,6 +1557,9 @@ function openDrawer(id, isNew, latlng){
   drawer.classList.add('open');
   drawer.classList.remove('peek');
   document.getElementById('btn-drawer-minimize').textContent = '▾ minimize';
+  if(window.matchMedia('(max-width: 700px)').matches){
+    document.getElementById('sidebar').classList.add('hidden');
+  }
   document.getElementById('save-hint').textContent='';
   if(!drawer.classList.contains('peek')) setTimeout(()=>document.getElementById('f-title').focus(), 200);
   hideHint();
@@ -2047,6 +2048,19 @@ async function checkForNewPhotos(){
       subFiles = subFiles.concat(files.map(f=> ({ ...f, folderName: sf.name })));
     }
     const files = rootFiles.concat(subFiles);
+    const currentFolderById = {};
+    files.forEach(f=>{ currentFolderById[f.id] = f.folderName; });
+    let movedCount = 0;
+    photos.forEach(p=>{
+      const srcId = p.sourceId || p.id;
+      if(Object.prototype.hasOwnProperty.call(currentFolderById, srcId)){
+        const newFolder = currentFolderById[srcId] || null;
+        if((p.folderName || null) !== newFolder){
+          p.folderName = newFolder;
+          movedCount++;
+        }
+      }
+    });
     const existingIds = new Set(photos.map(p=> p.sourceId || p.id));
     const newFiles = files.filter(f=>!existingIds.has(f.id));
     let convertedCount = 0;
@@ -2088,7 +2102,7 @@ async function checkForNewPhotos(){
     scheduleCloudSave();
     renderUnlocatedList();
     applyPhotoDateFilter();
-    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now${convertedCount ? ` (${convertedCount} converted from HEIC)` : ''}.`);
+    setPhotoStatus(`${photos.length} photo${photos.length===1?'':'s'} imported — ${newFiles.length} new just now${convertedCount ? ` (${convertedCount} converted from HEIC)` : ''}${movedCount ? ` · ${movedCount} folder tag${movedCount===1?'':'s'} updated` : ''}.`);
   }catch(e){
     setPhotoStatus("Couldn't reach Google Drive. Try again, or reconnect.");
   }
@@ -2496,11 +2510,19 @@ document.getElementById('btn-delete').onclick = ()=>{
 };
 
 document.getElementById('toggle-sidebar').onclick = ()=>{
-  document.getElementById('sidebar').classList.toggle('hidden');
+  const sidebar = document.getElementById('sidebar');
+  sidebar.classList.toggle('hidden');
+  if(window.matchMedia('(max-width: 700px)').matches && !sidebar.classList.contains('hidden')){
+    closeDrawer();
+  }
 };
 document.getElementById('sidebar-head').onclick = ()=>{
   if(window.matchMedia('(max-width: 700px)').matches){
-    document.getElementById('sidebar').classList.toggle('hidden');
+    const sidebar = document.getElementById('sidebar');
+    sidebar.classList.toggle('hidden');
+    if(!sidebar.classList.contains('hidden')){
+      closeDrawer();
+    }
   }
 };
 if(window.matchMedia('(max-width: 700px)').matches){
