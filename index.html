@@ -310,13 +310,11 @@
     #header-right{ flex-wrap:wrap; width:100%; gap:6px; }
     .pill-btn{ padding:9px 12px; font-size:12px; touch-action:manipulation; }
     #hint{ top:auto; bottom:16px; left:50%; font-size:13px; padding:8px 14px; max-width:88vw; text-align:center; }
-    #sidebar{ top:auto; left:0; right:0; bottom:0; width:100%; max-height:55vh; border-radius:16px 16px 0 0; transform:translateY(0); transition:transform 0.25s ease; }
-    #sidebar.hidden{ transform:translateY(calc(100% - 54px)); opacity:1; pointer-events:auto; }
-    #sidebar.hidden #filters, #sidebar.hidden #trip-list{ display:none; }
-    #sidebar-head{ cursor:pointer; padding-top:8px; }
-    #sidebar-handle{ display:block; width:36px; height:4px; border-radius:2px; background:rgba(250,243,224,0.35); margin:0 auto 10px; }
-    #sidebar-chevron{ display:inline-block; }
-    #sidebar.hidden #sidebar-chevron{ transform:rotate(180deg); }
+    #sidebar{ top:0; left:0; right:auto; bottom:0; width:85vw; max-width:320px; max-height:none; border-radius:0 16px 16px 0; transform:translateX(0); transition:transform 0.25s ease; }
+    #sidebar.hidden{ transform:translateX(-105%); opacity:1; pointer-events:none; }
+    #sidebar-head{ cursor:pointer; padding-top:14px; }
+    #sidebar-handle{ display:none; }
+    #sidebar-chevron{ display:none; }
     #photo-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #weather-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
     #improvements-panel{ top:auto; right:0; left:0; bottom:0; width:100%; max-height:70vh; border-radius:16px 16px 0 0; overflow-y:auto; }
