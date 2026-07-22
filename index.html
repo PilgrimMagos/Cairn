@@ -348,6 +348,7 @@
     </div>
     <div id="header-right">
       <button class="pill-btn" id="btn-signin">Sign in</button>
+      <button class="pill-btn owner-only" id="btn-signout">Sign out</button>
       <button class="pill-btn owner-only" id="btn-improvements">Improvements</button>
       <button class="pill-btn" id="btn-gallery">Gallery</button>
       <button class="pill-btn" id="btn-photos">Photos</button>
@@ -594,6 +595,7 @@ let driveFolderId = '';
 let isOwner = false;
 let driveTokenClient = null;
 let driveAccessToken = null;
+let driveTokenExpiresAt = 0;
 let appFolderId = localStorage.getItem('cairn:appFolderId') || '';
 let saveCloudTimer = null;
 
@@ -626,12 +628,44 @@ function initDriveAuth(){
   });
 }
 
+function trySilentSignIn(){
+  return new Promise((resolve)=>{
+    if(!driveTokenClient){ resolve(false); return; }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){ resolve(false); return; }
+      driveAccessToken = resp.access_token;
+      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      resolve(true);
+    };
+    try{ driveTokenClient.requestAccessToken({ prompt:'' }); }
+    catch(e){ resolve(false); }
+  });
+}
+
+async function attemptSilentSignIn(){
+  let tries = 0;
+  while(!driveTokenClient && tries < 25){ await new Promise(r=>setTimeout(r,200)); tries++; }
+  if(!driveTokenClient) return;
+  const success = await trySilentSignIn();
+  if(success){
+    isOwner = true;
+    ensureEditorName();
+    applyOwnerUI();
+    applyFilters();
+  }
+}
+
 function requestDriveToken(){
   return new Promise((resolve, reject)=>{
+    if(driveAccessToken && Date.now() < driveTokenExpiresAt - 60000){
+      resolve(driveAccessToken);
+      return;
+    }
     if(!driveTokenClient){ reject(new Error('Google auth not ready yet')); return; }
     driveTokenClient.callback = (resp)=>{
       if(resp.error){ reject(new Error(resp.error)); return; }
       driveAccessToken = resp.access_token;
+      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
       resolve(driveAccessToken);
     };
     driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
@@ -857,6 +891,20 @@ document.getElementById('btn-signin').onclick = async ()=>{
     }
   }catch(e){
     alert("Couldn't sign in — make sure you're using the Google account this app was set up with.");
+  }
+};
+
+document.getElementById('btn-signout').onclick = ()=>{
+  if(!confirm('Sign out of Cairn on this device?')) return;
+  const tokenToRevoke = driveAccessToken;
+  isOwner = false;
+  driveAccessToken = null;
+  driveTokenExpiresAt = 0;
+  applyOwnerUI();
+  applyFilters();
+  closeDrawer();
+  if(tokenToRevoke && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
+    try{ google.accounts.oauth2.revoke(tokenToRevoke, ()=>{}); }catch(e){}
   }
 };
 
@@ -2691,6 +2739,7 @@ async function boot(){
   renderList();
   loadPhotoMarkers();
   initDriveAuth();
+  attemptSilentSignIn();
   refreshWaypointWeather();
 }
 boot();
