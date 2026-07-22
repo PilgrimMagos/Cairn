@@ -208,6 +208,7 @@
   #date-filter-presets{ display:flex; gap:6px; margin-top:8px; flex-wrap:wrap; }
   #date-filter-presets .btn{ font-size:11px; padding:5px 10px; }
   #date-filter-status{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.7; margin-top:8px; }
+  #route-status{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; color:var(--parchment-dim); opacity:0.85; margin-bottom:8px; line-height:1.4; }
 
   .photo-pin{ width:28px; height:28px; }
   .photo-pin-inner{ width:28px; height:28px; border-radius:50%; background:var(--ink); border:2px solid var(--parchment); display:flex; align-items:center; justify-content:center; box-shadow:0 2px 5px rgba(0,0,0,0.45); }
@@ -415,6 +416,9 @@
       <button class="btn small" data-range="all">All time</button>
     </div>
     <div id="date-filter-status"></div>
+    <div class="field-label owner-only" style="margin-top:16px;">Routes</div>
+    <div id="route-status" class="owner-only">Drop .gpx files into your "Cairn GPX Routes" Drive folder, then check here.</div>
+    <button class="btn small owner-only" id="btn-check-routes">Check for new routes</button>
   </div>
 
   <div id="photo-viewer">
@@ -682,6 +686,15 @@ async function driveListFolder(folderId, token){
   return data.files || [];
 }
 
+async function driveListGpxFiles(folderId, token){
+  const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and name contains '.gpx'`);
+  const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name,mimeType)&pageSize=200`;
+  const res = await fetch(url, { headers: { Authorization: 'Bearer ' + token } });
+  if(!res.ok) throw new Error('list failed ' + res.status);
+  const data = await res.json();
+  return data.files || [];
+}
+
 async function driveListSubfolders(folderId, token){
   const q = encodeURIComponent(`'${folderId}' in parents and trashed=false and mimeType='application/vnd.google-apps.folder'`);
   const url = `https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)&pageSize=100`;
@@ -778,6 +791,26 @@ async function ensureAppFolder(){
   return appFolderId;
 }
 
+const GPX_FOLDER_NAME = 'Cairn GPX Routes';
+let gpxFolderId = localStorage.getItem('cairn:gpxFolderId') || '';
+async function ensureGpxFolder(){
+  if(gpxFolderId) return gpxFolderId;
+  let folder = await driveFindFile(`name='${GPX_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(!folder){
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: GPX_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }),
+    });
+    const data = await res.json();
+    folder = { id: data.id };
+    await driveSetPublic(folder.id);
+  }
+  gpxFolderId = folder.id;
+  localStorage.setItem('cairn:gpxFolderId', gpxFolderId);
+  return gpxFolderId;
+}
+
 async function bootstrapSharedStorage(){
   setPhotoStatus('Setting up shared storage…');
   try{
@@ -821,7 +854,7 @@ async function loadCloudData(){
     const res = await fetch(publicFileUrl(DATA_FILE_ID));
     if(!res.ok) throw new Error('status ' + res.status);
     const data = await res.json();
-    trips = data.trips || [];
+    trips = (data.trips || []).map(t => ({ ...t, notes: '', checklist: [], detailLoaded: false }));
     photos = data.photos || [];
     driveFolderId = data.photosFolderId || '';
     improvements = (data.improvements && data.improvements.length) ? data.improvements : DEFAULT_IMPROVEMENTS.map(text=>({ id:genId(), text }));
@@ -831,6 +864,11 @@ async function loadCloudData(){
     trips = []; photos = []; improvements = DEFAULT_IMPROVEMENTS.map(text=>({ id:genId(), text }));
     document.getElementById('hint').textContent = "Couldn't load the shared map right now.";
   }
+}
+
+function slimTripForSummary(t){
+  const { notes, checklist, detailLoaded, ...rest } = t;
+  return rest;
 }
 
 function scheduleCloudSave(){
@@ -843,8 +881,53 @@ async function doCloudSave(){
   const hint = document.getElementById('save-hint');
   try{
     await requestDriveToken();
-    const blob = new Blob([JSON.stringify({ trips, photos, photosFolderId: driveFolderId, improvements })], { type:'application/json' });
+    const blob = new Blob([JSON.stringify({ trips: trips.map(slimTripForSummary), photos, photosFolderId: driveFolderId, improvements })], { type:'application/json' });
     await driveUpdateFileContent(DATA_FILE_ID, blob, 'application/json');
+    hint.textContent = 'saved';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
+  }catch(e){
+    hint.textContent = 'could not save';
+  }
+}
+
+/* ---------- Per-waypoint detail (notes & checklist) ---------- */
+
+async function loadTripDetail(t){
+  if(t.detailLoaded) return;
+  if(!t.detailFileId){ t.detailLoaded = true; return; }
+  try{
+    const res = await fetch(publicFileUrl(t.detailFileId));
+    if(res.ok){
+      const data = await res.json();
+      t.notes = data.notes || '';
+      t.checklist = data.checklist || [];
+    }
+  }catch(e){}
+  t.detailLoaded = true;
+}
+
+let detailSaveTimers = {};
+function scheduleDetailSave(tripId){
+  clearTimeout(detailSaveTimers[tripId]);
+  detailSaveTimers[tripId] = setTimeout(()=> doDetailSave(tripId), 700);
+}
+
+async function doDetailSave(tripId){
+  const t = trips.find(tr=>tr.id===tripId);
+  if(!t || !canEditTrip(t)) return;
+  const hint = document.getElementById('save-hint');
+  try{
+    await requestDriveToken();
+    const blob = new Blob([JSON.stringify({ notes: t.notes||'', checklist: t.checklist||[] })], { type:'application/json' });
+    if(!t.detailFileId){
+      const folderId = await ensureAppFolder();
+      t.detailFileId = await driveCreateFile(blob, (t.title||'waypoint') + '-notes.json', folderId, 'application/json');
+      await driveSetPublic(t.detailFileId);
+      scheduleCloudSave();
+    } else {
+      await driveUpdateFileContent(t.detailFileId, blob, 'application/json');
+    }
     hint.textContent = 'saved';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
@@ -857,10 +940,21 @@ async function doCloudSave(){
 
 let editorName = localStorage.getItem('cairn:editorName') || '';
 
+function positionSidebarBelowHeader(){
+  if(window.matchMedia('(max-width: 700px)').matches){
+    const headerHeight = document.getElementById('header').offsetHeight;
+    document.getElementById('sidebar').style.top = (headerHeight + 8) + 'px';
+  } else {
+    document.getElementById('sidebar').style.top = '';
+  }
+}
+window.addEventListener('resize', positionSidebarBelowHeader);
+
 function applyOwnerUI(){
   document.body.classList.toggle('is-owner', isOwner);
   document.getElementById('btn-signin').textContent = isOwner ? (editorName || 'Signed in ✓') : 'Sign in';
   document.getElementById('btn-signin').classList.toggle('owner', isOwner);
+  setTimeout(positionSidebarBelowHeader, 0);
 }
 
 function ensureEditorName(){
@@ -1617,7 +1711,6 @@ function openDrawer(id, isNew, latlng){
     setDrawerOwnerState(t);
     document.getElementById('not-your-pin-note').textContent = t.createdBy ? `Added by ${t.createdBy} — only they can edit this one.` : 'Added by someone else — only they can edit this one.';
     document.getElementById('f-title').value = t.title;
-    document.getElementById('f-notes').value = t.notes;
     document.getElementById('f-group').value = t.group || '';
     document.getElementById('f-coords').value = `${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`;
     document.getElementById('f-coords').classList.remove('invalid');
@@ -1629,10 +1722,21 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('attachments-section').style.display = 'block';
     document.getElementById('tides-section').style.display = (t.category === 'sea') ? 'block' : 'none';
     document.getElementById('save-first-note').style.display = 'none';
-    t.checklist = t.checklist || [];
     t.attachments = t.attachments || [];
-    renderChecklist(t);
     renderAttachments(t);
+    if(t.detailLoaded){
+      document.getElementById('f-notes').value = t.notes;
+      renderChecklist(t);
+    } else {
+      document.getElementById('f-notes').value = 'Loading notes…';
+      document.getElementById('checklist-list').innerHTML = '';
+      loadTripDetail(t).then(()=>{
+        if(currentId === id){
+          document.getElementById('f-notes').value = t.notes;
+          renderChecklist(t);
+        }
+      });
+    }
   }
   drawer.classList.add('open');
   drawer.classList.remove('peek');
@@ -1883,12 +1987,12 @@ function renderChecklist(trip){
     row.querySelector('input').onchange = (e)=>{
       if(!editable) return;
       item.done = e.target.checked;
-      scheduleCloudSave();
+      scheduleDetailSave(trip.id);
       row.classList.toggle('done', item.done);
     };
     row.querySelector('button').onclick = ()=>{
       trip.checklist = trip.checklist.filter(i=>i.id!==item.id);
-      scheduleCloudSave();
+      scheduleDetailSave(trip.id);
       renderChecklist(trip);
     };
     box.appendChild(row);
@@ -1900,7 +2004,7 @@ function addChecklistItem(trip){
   if(!text) return;
   trip.checklist = trip.checklist || [];
   trip.checklist.push({ id:genId(), text, done:false });
-  scheduleCloudSave();
+  scheduleDetailSave(trip.id);
   input.value = '';
   renderChecklist(trip);
 }
@@ -2040,6 +2144,13 @@ document.getElementById('attachment-file').onchange = (e)=>{
   if(t && e.target.files.length) addAttachmentFiles(t, Array.from(e.target.files));
   e.target.value = '';
 };
+document.getElementById('f-notes').addEventListener('input', ()=>{
+  if(!canEditCurrentDrawer() || !currentId) return;
+  const t = trips.find(tr=>tr.id===currentId);
+  if(!t) return;
+  t.notes = document.getElementById('f-notes').value;
+  scheduleDetailSave(t.id);
+});
 
 /* ---------- Photos from Drive folder ---------- */
 
@@ -2240,6 +2351,65 @@ async function checkForNewPhotos(){
     setPhotoStatus("Couldn't reach Google Drive. Try again, or reconnect.");
   }
 }
+
+/* ---------- GPX auto-import ---------- */
+
+async function detectSeaOrHike(lat, lng){
+  try{
+    const res = await fetch(`https://rest.emodnet-bathymetry.eu/depth/point?geom=POINT(${lng} ${lat})`);
+    if(!res.ok) return 'hike';
+    const data = await res.json();
+    if(data && typeof data.avg === 'number') return 'sea';
+    return 'hike';
+  }catch(e){
+    return 'hike';
+  }
+}
+
+async function checkForNewRoutes(){
+  const status = document.getElementById('route-status');
+  status.textContent = 'Checking for new routes…';
+  try{
+    const token = await requestDriveToken();
+    const routesFolder = await ensureGpxFolder();
+    const files = await driveListGpxFiles(routesFolder, token);
+    const usedIds = new Set(trips.filter(t=>t.gpxFileId).map(t=>t.gpxFileId));
+    const newFiles = files.filter(f=>!usedIds.has(f.id));
+    let importedCount = 0;
+    for(const f of newFiles){
+      try{
+        await driveSetPublic(f.id);
+        const blob = await driveDownloadFile(f.id, token);
+        const text = await blob.text();
+        const coords = parseGpxText(text);
+        if(coords.length < 2){ await sleep(150); continue; }
+        const title = f.name.replace(/\.gpx$/i, '');
+        const startLat = coords[0][0], startLng = coords[0][1];
+        const category = await detectSeaOrHike(startLat, startLng);
+        const appFolder = await ensureAppFolder();
+        const detailBlob = new Blob([JSON.stringify({ notes:'', checklist:[] })], { type:'application/json' });
+        const detailFileId = await driveCreateFile(detailBlob, title + '-notes.json', appFolder, 'application/json');
+        await driveSetPublic(detailFileId);
+        const trip = {
+          id: 'w' + Date.now() + Math.random().toString(36).slice(2,5),
+          lat:startLat, lng:startLng, title, group:'', category,
+          created:Date.now(), createdBy: editorName || null,
+          gpxFileId: f.id, detailFileId, notes:'', checklist:[], attachments:[], detailLoaded:true,
+        };
+        trips.push(trip);
+        addMarker(trip);
+        importedCount++;
+      }catch(e){}
+      await sleep(200);
+    }
+    scheduleCloudSave();
+    applyFilters();
+    renderList();
+    status.textContent = `${importedCount} new route${importedCount===1?'':'s'} imported from your GPX folder.`;
+  }catch(e){
+    status.textContent = "Couldn't check for new routes.";
+  }
+}
 function populateLinkSelect(currentLinkedId){
   const sel = document.getElementById('photo-link-select');
   sel.innerHTML = '<option value="">Not linked</option>' + trips.map(t=>
@@ -2435,6 +2605,7 @@ document.getElementById('btn-save-folder').onclick = ()=>{
   setPhotoStatus('Folder saved. Click "Check for new photos" to connect.');
 };
 document.getElementById('btn-check-photos').onclick = checkForNewPhotos;
+document.getElementById('btn-check-routes').onclick = checkForNewRoutes;
 
 async function cleanupHeicOriginals(){
   const pending = photos.filter(p=>p.heicOriginalId);
@@ -2626,26 +2797,32 @@ document.getElementById('btn-save').onclick = async ()=>{
     await requestDriveToken();
 
     if(isNewPin){
-      const trip = { id:pendingId, lat, lng, title, notes, group, category, created:Date.now(), createdBy: editorName || null, gpxFileId:null, checklist:[], attachments:[] };
+      const trip = { id:pendingId, lat, lng, title, notes, group, category, created:Date.now(), createdBy: editorName || null, gpxFileId:null, detailFileId:null, checklist:[], attachments:[], detailLoaded:true };
       if(pendingGpxAction==='add'){
-        const folderId = await ensureAppFolder();
+        const gpxFolder = await ensureGpxFolder();
         const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
-        trip.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml');
+        trip.gpxFileId = await driveCreateFile(blob, title + '.gpx', gpxFolder, 'application/gpx+xml');
         await driveSetPublic(trip.gpxFileId);
       }
+      try{
+        const appFolder = await ensureAppFolder();
+        const detailBlob = new Blob([JSON.stringify({ notes: trip.notes, checklist: trip.checklist })], { type:'application/json' });
+        trip.detailFileId = await driveCreateFile(detailBlob, title + '-notes.json', appFolder, 'application/json');
+        await driveSetPublic(trip.detailFileId);
+      }catch(e){}
       trips.push(trip);
       addMarker(trip);
     } else {
       const t = trips.find(tr=>tr.id===currentId);
       if(pendingGpxAction==='add'){
-        const folderId = await ensureAppFolder();
+        const gpxFolder = await ensureGpxFolder();
         const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
         if(t.gpxFileId){ await driveUpdateFileContent(t.gpxFileId, blob, 'application/gpx+xml'); }
-        else{ t.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml'); await driveSetPublic(t.gpxFileId); }
+        else{ t.gpxFileId = await driveCreateFile(blob, title + '.gpx', gpxFolder, 'application/gpx+xml'); await driveSetPublic(t.gpxFileId); }
       } else if(pendingGpxAction==='remove'){
         t.gpxFileId = null;
       }
-      t.title = title; t.notes = notes; t.group = group; t.category = category; t.lat = lat; t.lng = lng;
+      t.title = title; t.group = group; t.category = category; t.lat = lat; t.lng = lng;
       markers[currentId].setLatLng([lat,lng]);
       markers[currentId].setIcon(makeIcon(category));
     }
@@ -2711,8 +2888,12 @@ map.on('click', (e)=>{
 
 /* ---------- Backup export / import ---------- */
 
-document.getElementById('btn-export').onclick = ()=>{
-  const bundle = { trips, photos, photosFolderId: driveFolderId };
+document.getElementById('btn-export').onclick = async ()=>{
+  const btn = document.getElementById('btn-export');
+  btn.textContent = 'Preparing…';
+  await Promise.all(trips.map(t=> loadTripDetail(t)));
+  btn.textContent = 'Export backup';
+  const bundle = { trips: trips.map(({detailLoaded, ...rest})=>rest), photos, photosFolderId: driveFolderId };
   const blob = new Blob([JSON.stringify(bundle, null, 2)], { type:'application/json' });
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
@@ -2731,17 +2912,25 @@ document.getElementById('import-file').onchange = (e)=>{
       if(!Array.isArray(bundle.trips)) throw new Error('bad file');
       if(!confirm(`Import ${bundle.trips.length} waypoint(s)? This adds to what's already shared.`)) return;
       const folderId = await ensureAppFolder();
+      const gpxFolder = await ensureGpxFolder();
       for(const t of bundle.trips){
         if(trips.some(existing=>existing.id===t.id)) t.id = 'w' + Date.now() + Math.random().toString(36).slice(2,6);
         t.checklist = t.checklist || [];
         t.attachments = t.attachments || [];
+        t.notes = t.notes || '';
+        t.detailLoaded = true;
         if(t.hasGpx && bundle.gpx && bundle.gpx[t.id]){
           try{
             const blob = new Blob([bundle.gpx[t.id]], { type:'application/gpx+xml' });
-            t.gpxFileId = await driveCreateFile(blob, (t.title||'route') + '.gpx', folderId, 'application/gpx+xml');
+            t.gpxFileId = await driveCreateFile(blob, (t.title||'route') + '.gpx', gpxFolder, 'application/gpx+xml');
             await driveSetPublic(t.gpxFileId);
           }catch(err){}
         }
+        try{
+          const detailBlob = new Blob([JSON.stringify({ notes: t.notes, checklist: t.checklist })], { type:'application/json' });
+          t.detailFileId = await driveCreateFile(detailBlob, (t.title||'waypoint') + '-notes.json', folderId, 'application/json');
+          await driveSetPublic(t.detailFileId);
+        }catch(err){}
         trips.push(t);
         addMarker(t);
       }
