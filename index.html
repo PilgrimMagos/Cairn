@@ -294,9 +294,11 @@
   body.is-owner button.owner-only, body.is-owner .pill-btn.owner-only{ display:inline-flex; }
   body.is-owner div.owner-only, body.is-owner #checklist-add.owner-only{ display:flex; }
   .editor-only{ display:none; }
-  body.can-edit-trip .editor-only{ display:initial; }
-  body.can-edit-trip button.editor-only{ display:inline-flex; }
-  body.can-edit-trip div.editor-only, body.can-edit-trip #checklist-add.editor-only{ display:flex; }
+  body.can-edit-trip.is-editing-drawer .editor-only{ display:initial; }
+  body.can-edit-trip.is-editing-drawer button.editor-only{ display:inline-flex; }
+  body.can-edit-trip.is-editing-drawer div.editor-only, body.can-edit-trip.is-editing-drawer #checklist-add.editor-only{ display:flex; }
+  .edit-trigger{ display:none; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; opacity:0.65; align-items:center; gap:4px; }
+  body.can-edit-trip:not(.is-editing-drawer) .edit-trigger{ display:inline-flex; }
   #not-your-pin-note{ display:none; font-size:12.5px; color:var(--ink-soft); opacity:0.75; font-style:italic; margin-top:6px; }
   body.is-owner:not(.can-edit-trip) #not-your-pin-note.showable{ display:block; }
 
@@ -487,6 +489,7 @@
     <div id="drawer-handle"></div>
     <div id="drawer-inner">
       <div id="drawer-top-row">
+        <button id="btn-drawer-edit" class="edit-trigger">✎ edit</button>
         <button id="btn-drawer-minimize">▾ minimize</button>
         <button id="drawer-close">✕ close</button>
       </div>
@@ -841,6 +844,7 @@ async function doCloudSave(){
   if(!isOwner || !DATA_FILE_ID) return;
   const hint = document.getElementById('save-hint');
   try{
+    await requestDriveToken();
     const blob = new Blob([JSON.stringify({ trips, photos, photosFolderId: driveFolderId, improvements })], { type:'application/json' });
     await driveUpdateFileContent(DATA_FILE_ID, blob, 'application/json');
     hint.textContent = 'saved';
@@ -1559,13 +1563,21 @@ function canEditTrip(trip){
   return trip.createdBy === editorName;
 }
 
+let isEditingDrawer = false;
+
+function canEditCurrentDrawer(){
+  return document.body.classList.contains('can-edit-trip') && isEditingDrawer;
+}
+
 function setDrawerOwnerState(trip){
   const editable = canEditTrip(trip);
   document.body.classList.toggle('can-edit-trip', editable);
-  document.getElementById('f-title').disabled = !editable;
-  document.getElementById('f-coords').disabled = !editable;
-  document.getElementById('f-notes').disabled = !editable;
-  document.getElementById('f-group').disabled = !editable;
+  document.body.classList.toggle('is-editing-drawer', isEditingDrawer);
+  const fieldsEnabled = editable && isEditingDrawer;
+  document.getElementById('f-title').disabled = !fieldsEnabled;
+  document.getElementById('f-coords').disabled = !fieldsEnabled;
+  document.getElementById('f-notes').disabled = !fieldsEnabled;
+  document.getElementById('f-group').disabled = !fieldsEnabled;
 }
 
 function openDrawer(id, isNew, latlng){
@@ -1581,6 +1593,7 @@ function openDrawer(id, isNew, latlng){
   document.getElementById('place-search-results').innerHTML = '';
   const drawer = document.getElementById('drawer');
   if(isNew){
+    isEditingDrawer = true;
     setDrawerOwnerState(null);
     if(!isOwner) return;
     pendingId = 'w' + Date.now();
@@ -1602,6 +1615,7 @@ function openDrawer(id, isNew, latlng){
   } else {
     pendingId = id;
     const t = trips.find(tr=>tr.id===id);
+    isEditingDrawer = false;
     setDrawerOwnerState(t);
     document.getElementById('not-your-pin-note').textContent = t.createdBy ? `Added by ${t.createdBy} — only they can edit this one.` : 'Added by someone else — only they can edit this one.';
     document.getElementById('f-title').value = t.title;
@@ -1638,11 +1652,20 @@ function togglePeek(){
 }
 document.getElementById('drawer-handle').onclick = togglePeek;
 document.getElementById('btn-drawer-minimize').onclick = togglePeek;
+document.getElementById('btn-drawer-edit').onclick = ()=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  if(!canEditTrip(t)) return;
+  isEditingDrawer = true;
+  setDrawerOwnerState(t);
+  if(t){ renderChecklist(t); renderAttachments(t); }
+  setTimeout(()=>document.getElementById('f-title').focus(), 150);
+};
 function closeDrawer(){
   document.getElementById('drawer').classList.remove('open');
   document.getElementById('drawer').classList.remove('peek');
   currentId = null; pendingId = null; isNewPin = false;
   pendingGpxAction = null; pendingGpxText = null;
+  isEditingDrawer = false;
   clearRoute();
 }
 
@@ -1854,12 +1877,13 @@ function genId(){ return Date.now().toString(36) + Math.random().toString(36).sl
 function renderChecklist(trip){
   const box = document.getElementById('checklist-list');
   box.innerHTML = '';
+  const editable = canEditCurrentDrawer();
   (trip.checklist || []).forEach(item=>{
     const row = document.createElement('div');
     row.className = 'checklist-item' + (item.done ? ' done' : '');
-    row.innerHTML = `<input type="checkbox" ${item.done?'checked':''} ${isOwner?'':'disabled'}><span>${escapeHtml(item.text)}</span><button aria-label="Remove" style="${isOwner?'':'display:none'}">✕</button>`;
+    row.innerHTML = `<input type="checkbox" ${item.done?'checked':''} ${editable?'':'disabled'}><span>${escapeHtml(item.text)}</span><button aria-label="Remove" style="${editable?'':'display:none'}">✕</button>`;
     row.querySelector('input').onchange = (e)=>{
-      if(!isOwner) return;
+      if(!editable) return;
       item.done = e.target.checked;
       scheduleCloudSave();
       row.classList.toggle('done', item.done);
@@ -1899,7 +1923,7 @@ function renderAttachments(trip){
       img.onclick = ()=> openAttachmentViewer(trip, att.id);
       wrap.appendChild(img);
     }
-    if(isOwner){
+    if(canEditCurrentDrawer()){
       const del = document.createElement('button');
       del.textContent = '✕';
       del.setAttribute('aria-label','Remove');
@@ -2596,41 +2620,49 @@ document.getElementById('btn-save').onclick = async ()=>{
   }
   coordsField.classList.remove('invalid');
 
-  const folderId = await ensureAppFolder();
+  const saveBtn = document.getElementById('btn-save');
+  saveBtn.disabled = true;
+  document.getElementById('save-hint').textContent = 'Saving…';
 
-  if(isNewPin){
-    const trip = { id:pendingId, lat, lng, title, notes, group, category, created:Date.now(), createdBy: editorName || null, gpxFileId:null, checklist:[], attachments:[] };
-    trips.push(trip);
-    addMarker(trip);
-    if(pendingGpxAction==='add'){
-      try{
+  try{
+    await requestDriveToken();
+
+    if(isNewPin){
+      const trip = { id:pendingId, lat, lng, title, notes, group, category, created:Date.now(), createdBy: editorName || null, gpxFileId:null, checklist:[], attachments:[] };
+      if(pendingGpxAction==='add'){
+        const folderId = await ensureAppFolder();
         const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
         trip.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml');
         await driveSetPublic(trip.gpxFileId);
-      }catch(e){}
-    }
-  } else {
-    const t = trips.find(tr=>tr.id===currentId);
-    t.title = title; t.notes = notes; t.group = group; t.category = category; t.lat = lat; t.lng = lng;
-    markers[currentId].setLatLng([lat,lng]);
-    markers[currentId].setIcon(makeIcon(category));
-    if(pendingGpxAction==='add'){
-      try{
+      }
+      trips.push(trip);
+      addMarker(trip);
+    } else {
+      const t = trips.find(tr=>tr.id===currentId);
+      if(pendingGpxAction==='add'){
+        const folderId = await ensureAppFolder();
         const blob = new Blob([pendingGpxText], { type:'application/gpx+xml' });
         if(t.gpxFileId){ await driveUpdateFileContent(t.gpxFileId, blob, 'application/gpx+xml'); }
         else{ t.gpxFileId = await driveCreateFile(blob, title + '.gpx', folderId, 'application/gpx+xml'); await driveSetPublic(t.gpxFileId); }
-      }catch(e){}
-    } else if(pendingGpxAction==='remove'){
-      t.gpxFileId = null;
+      } else if(pendingGpxAction==='remove'){
+        t.gpxFileId = null;
+      }
+      t.title = title; t.notes = notes; t.group = group; t.category = category; t.lat = lat; t.lng = lng;
+      markers[currentId].setLatLng([lat,lng]);
+      markers[currentId].setIcon(makeIcon(category));
     }
-  }
 
-  scheduleCloudSave();
-  applyFilters();
-  renderList();
-  refreshAllRoutesIfOn();
-  closeDrawer();
-  refreshWaypointWeather();
+    scheduleCloudSave();
+    applyFilters();
+    renderList();
+    refreshAllRoutesIfOn();
+    refreshWaypointWeather();
+    closeDrawer();
+  }catch(e){
+    document.getElementById('save-hint').textContent = "Couldn't save — check your connection and try again.";
+  }finally{
+    saveBtn.disabled = false;
+  }
 };
 
 document.getElementById('btn-cancel').onclick = ()=> closeDrawer();
