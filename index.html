@@ -2101,19 +2101,47 @@ function addPhotoMarker(photo){
   photoClusterGroup.addLayer(m);
   photoMarkers[photo.id] = m;
 }
+function sleep(ms){ return new Promise(r=>setTimeout(r, ms)); }
+
+function throttledLoadImages(imgEls, batchSize, delayMs){
+  batchSize = batchSize || 6;
+  delayMs = delayMs || 180;
+  let i = 0;
+  function next(){
+    const batch = imgEls.slice(i, i+batchSize);
+    batch.forEach(img=>{
+      if(img.dataset && img.dataset.src){ img.src = img.dataset.src; delete img.dataset.src; }
+    });
+    i += batchSize;
+    if(i < imgEls.length) setTimeout(next, delayMs);
+  }
+  next();
+}
+
 function renderUnlocatedList(){
   const box = document.getElementById('unlocated-list');
   const unlocated = photos.filter(p=>!p.lat || !p.lng);
   if(unlocated.length === 0){ box.innerHTML=''; return; }
   box.innerHTML = `<div class="field-label" style="margin-top:14px;">No location data (${unlocated.length})</div>`;
+  const imgTiles = [];
   unlocated.forEach(p=>{
     const row = document.createElement('div');
     row.className = 'unlocated-row';
-    const thumb = isVideoType(p.mimeType) ? `<div class="video-thumb" style="width:32px;height:32px;font-size:12px;">▶</div>` : `<img src="${publicFileUrl(p.id)}">`;
-    row.innerHTML = `${thumb}<span>${escapeHtml(formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt))}</span>`;
+    if(isVideoType(p.mimeType)){
+      row.innerHTML = `<div class="video-thumb" style="width:32px;height:32px;font-size:12px;">▶</div><span>${escapeHtml(formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt))}</span>`;
+    } else {
+      const img = document.createElement('img');
+      img.dataset.src = publicFileUrl(p.id);
+      const span = document.createElement('span');
+      span.textContent = formatPhotoDate(p.takenAt || p.importedAt, !!p.takenAt);
+      row.appendChild(img);
+      row.appendChild(span);
+      imgTiles.push(img);
+    }
     row.onclick = ()=> openPhotoViewer(p.id);
     box.appendChild(row);
   });
+  throttledLoadImages(imgTiles);
 }
 async function checkForNewPhotos(){
   if(!driveFolderId){ setPhotoStatus('Paste your folder link above first.'); return; }
@@ -2127,6 +2155,7 @@ async function checkForNewPhotos(){
     for(const sf of subfolders){
       const files = await driveListFolder(sf.id, token);
       subFiles = subFiles.concat(files.map(f=> ({ ...f, folderName: sf.name })));
+      await sleep(150);
     }
     const files = rootFiles.concat(subFiles);
     const currentFolderById = {};
@@ -2179,6 +2208,7 @@ async function checkForNewPhotos(){
       const photo = { id:displayId, sourceId:f.id, name:f.name, mimeType, lat:meta.lat, lng:meta.lng, takenAt:meta.takenAt, importedAt:Date.now(), linkedTripId:null, heicOriginalId, folderName: f.folderName || null };
       photos.push(photo);
       if(photo.lat && photo.lng) addPhotoMarker(photo);
+      await sleep(200);
     }
     scheduleCloudSave();
     renderUnlocatedList();
@@ -2438,17 +2468,27 @@ function renderTileGrid(items){
     grid.innerHTML = '<div id="gallery-empty">Nothing here yet.</div>';
     return;
   }
+  const imgTiles = [];
   items.forEach(item=>{
     const tile = document.createElement('div');
     tile.className = 'gallery-tile';
     if(isVideoType(item.mimeType)){
       tile.innerHTML = `<div class="video-thumb">▶</div><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
     } else {
-      tile.innerHTML = `<img src="${publicFileUrl(item.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(item.caption)}</div>`;
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.dataset.src = publicFileUrl(item.id);
+      const cap = document.createElement('div');
+      cap.className = 'tile-caption';
+      cap.textContent = item.caption;
+      tile.appendChild(img);
+      tile.appendChild(cap);
+      imgTiles.push(img);
     }
     tile.onclick = ()=> item.openFn();
     grid.appendChild(tile);
   });
+  throttledLoadImages(imgTiles);
 }
 
 function renderFolderTiles(){
@@ -2466,6 +2506,7 @@ function renderFolderTiles(){
     grid.innerHTML = '<div id="gallery-empty">No location photos yet.</div>';
     return;
   }
+  const imgTiles = [];
   folderNames.forEach(name=>{
     const groupItems = groups[name];
     const cover = groupItems[0];
@@ -2474,11 +2515,20 @@ function renderFolderTiles(){
     if(isVideoType(cover.mimeType)){
       tile.innerHTML = `<div class="video-thumb">▶</div><div class="tile-caption">${escapeHtml(name)} · ${groupItems.length}</div>`;
     } else {
-      tile.innerHTML = `<img src="${publicFileUrl(cover.id)}" loading="lazy"><div class="tile-caption">${escapeHtml(name)} · ${groupItems.length}</div>`;
+      const img = document.createElement('img');
+      img.loading = 'lazy';
+      img.dataset.src = publicFileUrl(cover.id);
+      const cap = document.createElement('div');
+      cap.className = 'tile-caption';
+      cap.textContent = `${name} · ${groupItems.length}`;
+      tile.appendChild(img);
+      tile.appendChild(cap);
+      imgTiles.push(img);
     }
     tile.onclick = ()=>{ gallerySelectedFolder = name; renderGallery(); };
     grid.appendChild(tile);
   });
+  throttledLoadImages(imgTiles);
 }
 
 function renderGallery(){

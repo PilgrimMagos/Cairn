@@ -1,4 +1,5 @@
-const CACHE_NAME = 'cairn-cache-v3';
+const CACHE_NAME = 'cairn-cache-v4';
+const STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // don't re-check anything already cached within 24h
 
 const NEVER_INTERCEPT = [
   'accounts.google.com',
@@ -25,6 +26,20 @@ self.addEventListener('activate', (event) => {
   );
 });
 
+async function putWithTimestamp(cache, req, res){
+  const headers = new Headers(res.headers);
+  headers.set('x-cairn-cached-at', Date.now().toString());
+  const body = await res.blob();
+  const timestamped = new Response(body, { status: res.status, statusText: res.statusText, headers });
+  await cache.put(req, timestamped);
+}
+
+function isStale(cachedRes){
+  const ts = cachedRes.headers.get('x-cairn-cached-at');
+  if(!ts) return true;
+  return (Date.now() - parseInt(ts, 10)) > STALE_MAX_AGE_MS;
+}
+
 self.addEventListener('fetch', (event) => {
   const req = event.request;
 
@@ -49,23 +64,31 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // Everything else: serve instantly from cache when available, and quietly
-  // refresh the cache in the background for next time (stale-while-revalidate).
+  // Everything else: serve instantly from cache when available. Only bother
+  // re-checking the network in the background if that cached copy is actually
+  // old — already-cached photos don't get re-fetched on every single view.
   event.respondWith(
     caches.open(CACHE_NAME).then(async (cache) => {
       const cached = await cache.match(req);
-      const networkFetch = fetch(req).then(res => {
-        if (res && res.status === 200) cache.put(req, res.clone());
-        return res;
-      }).catch(() => null);
-
       if (cached) {
-        event.waitUntil(networkFetch);
+        if (isStale(cached)) {
+          event.waitUntil(
+            fetch(req).then(res => {
+              if (res && res.status === 200) return putWithTimestamp(cache, req, res);
+            }).catch(() => null)
+          );
+        }
         return cached;
       }
-      const netRes = await networkFetch;
-      if (netRes) return netRes;
-      throw new Error('offline and not cached');
+      try {
+        const netRes = await fetch(req);
+        if (netRes && netRes.status === 200) {
+          await putWithTimestamp(cache, req, netRes.clone());
+        }
+        return netRes;
+      } catch (e) {
+        throw new Error('offline and not cached');
+      }
     })
   );
 });
