@@ -69,6 +69,7 @@
   #sort-row .btn{ font-size:11px; padding:5px 10px; color:var(--parchment-dim); border-color:rgba(250,243,224,0.25); }
   #sort-row .btn.active{ background:var(--parchment); color:var(--ink); border-color:var(--parchment); }
   #filters{ display:flex; flex-wrap:wrap; gap:6px; }
+  #layer-filters{ display:flex; flex-wrap:wrap; gap:6px; margin-bottom:8px; }
   #group-filters{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(250,243,224,0.1); }
   #creator-filters{ display:flex; flex-wrap:wrap; gap:6px; margin-top:8px; padding-top:8px; border-top:1px solid rgba(250,243,224,0.1); }
   .chip{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; padding:4px 9px; border-radius:20px; border:1px solid rgba(250,243,224,0.3); color:var(--parchment-dim); cursor:pointer; display:flex; align-items:center; gap:5px; user-select:none; }
@@ -488,6 +489,7 @@
         <button class="btn small" data-sort="alpha">A–Z</button>
         <button class="btn small" data-sort="nearest">Nearest</button>
       </div>
+      <div id="layer-filters"></div>
       <div id="filters"></div>
       <div id="group-filters"></div>
       <div id="creator-filters"></div>
@@ -1213,6 +1215,11 @@ const mutedBaseLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/
   maxZoom: 19,
 });
 
+// Waypoint markers live in their own layer group (rather than being added to
+// the map individually) so "hide waypoints" can show/hide all of them in one
+// call, the same way the photo pin layer already works.
+const waypointLayerGroup = L.layerGroup().addTo(map);
+
 function lockToUkIreland(){
   const fitZoom = map.getBoundsZoom(UK_IRELAND_BOUNDS, false);
   map.setMinZoom(fitZoom);
@@ -1652,6 +1659,42 @@ const photoClusterGroup = L.markerClusterGroup({
   },
 }).addTo(map);
 
+/* Independent show/hide toggles for the two pin layers (waypoints, photos) —
+   unlike the category/group/creator chips below, these aren't "isolate" style;
+   each one just controls whether its own layer is on the map at all. Resets
+   to both-shown on every reload, matching the other map-layer toggles (Depths,
+   Weather, All routes) rather than persisting as a saved preference. */
+let waypointsLayerVisible = true;
+let photosLayerVisible = true;
+function setWaypointsLayerVisible(visible){
+  waypointsLayerVisible = visible;
+  if(visible){ if(!map.hasLayer(waypointLayerGroup)) waypointLayerGroup.addTo(map); }
+  else if(map.hasLayer(waypointLayerGroup)) map.removeLayer(waypointLayerGroup);
+}
+function setPhotosLayerVisible(visible){
+  photosLayerVisible = visible;
+  if(visible){ if(!map.hasLayer(photoClusterGroup)) photoClusterGroup.addTo(map); }
+  else if(map.hasLayer(photoClusterGroup)) map.removeLayer(photoClusterGroup);
+}
+function buildLayerFilters(){
+  const el = document.getElementById('layer-filters');
+  el.innerHTML = '';
+  const defs = [
+    { key:'waypoints', label:'Waypoints', color:'var(--parchment-dim)', get:()=>waypointsLayerVisible, set:setWaypointsLayerVisible },
+    { key:'photos', label:'Photos', color:'var(--food)', get:()=>photosLayerVisible, set:setPhotosLayerVisible },
+  ];
+  defs.forEach(d=>{
+    const chip = document.createElement('div');
+    chip.className = 'chip' + (d.get() ? '' : ' off');
+    chip.innerHTML = `<span class="dot" style="background:${d.color}"></span>${d.label}`;
+    chip.onclick = ()=>{
+      d.set(!d.get());
+      chip.classList.toggle('off', !d.get());
+    };
+    el.appendChild(chip);
+  });
+}
+
 function buildFilters(){
   const el = document.getElementById('filters');
   el.innerHTML = '';
@@ -1821,7 +1864,7 @@ function renderList(){
   });
 }
 function addMarker(trip){
-  const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category, false, weekendRatingFor(trip.id)) }).addTo(map);
+  const m = L.marker([trip.lat, trip.lng], { icon: makeIcon(trip.category, false, weekendRatingFor(trip.id)) }).addTo(waypointLayerGroup);
   m.on('click', ()=>{
     map.flyTo([trip.lat, trip.lng], Math.max(map.getZoom(), 12), { duration:0.6 });
     openDrawer(trip.id, false);
@@ -3209,7 +3252,7 @@ document.getElementById('btn-delete').onclick = async ()=>{
   document.getElementById('save-hint').textContent = 'Deleting…';
   const removedId = currentId;
   trips = trips.filter(tr=>tr.id!==removedId);
-  if(markers[removedId]){ map.removeLayer(markers[removedId]); delete markers[removedId]; }
+  if(markers[removedId]){ markers[removedId].remove(); delete markers[removedId]; }
   const saved = await doCloudSave();
   if(!saved && navigator.onLine){
     // Genuine failure while online — revert, rather than risk queuing a delete
@@ -3374,6 +3417,7 @@ document.getElementById('btn-refresh-app').onclick = async ()=>{
 
 async function boot(){
   updateOnlineStatus();
+  buildLayerFilters();
   buildFilters();
   buildCatSelect();
   applyOwnerUI();
