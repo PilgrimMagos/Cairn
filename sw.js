@@ -1,4 +1,4 @@
-const CACHE_NAME = 'cairn-cache-v4';
+const CACHE_NAME = 'cairn-cache-v5'; // bumped: added the CAIRN_PIN_URLS message handler below
 const STALE_MAX_AGE_MS = 24 * 60 * 60 * 1000; // don't re-check anything already cached within 24h
 
 const NEVER_INTERCEPT = [
@@ -91,4 +91,28 @@ self.addEventListener('fetch', (event) => {
       }
     })
   );
+});
+
+// Per-pin "save offline": index.html asks us to proactively fetch and cache a
+// specific waypoint's files (its notes/checklist file, GPX route, and photos)
+// so the drawer works with no signal later. Handled here — rather than
+// index.html reaching into caches.open(CACHE_NAME) directly — so the cache
+// name/versioning stays owned by this one file and can't drift out of sync.
+self.addEventListener('message', (event) => {
+  const msg = event.data;
+  if (!msg || msg.type !== 'CAIRN_PIN_URLS') return;
+  const urls = Array.isArray(msg.urls) ? msg.urls : [];
+  event.waitUntil((async () => {
+    const cache = await caches.open(CACHE_NAME);
+    await Promise.all(urls.map(async (url) => {
+      try {
+        const res = await fetch(url);
+        if (res && res.status === 200) await putWithTimestamp(cache, new Request(url), res);
+      } catch (e) {
+        // Leave it uncached — the pin just won't be fully available offline yet;
+        // the drawer's normal cache-first fetch will retry next time it's viewed online.
+      }
+    }));
+    if (event.source) event.source.postMessage({ type: 'CAIRN_PIN_URLS_DONE', urls });
+  })());
 });

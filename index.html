@@ -105,6 +105,9 @@
   #drawer-close{ align-self:flex-end; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; margin-bottom:8px; opacity:0.65; }
   #drawer-top-row{ display:flex; justify-content:flex-end; gap:14px; margin-bottom:8px; }
   #btn-drawer-minimize{ display:none; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; opacity:0.65; align-items:center; gap:4px; }
+  #btn-save-offline{ background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; opacity:0.65; align-items:center; gap:4px; margin-right:auto; }
+  #btn-save-offline.active{ opacity:1; color:var(--hike); }
+  #btn-save-offline[disabled]{ opacity:0.35; cursor:default; }
   #drawer-close:hover{ opacity:1; }
   .field-label{ font-family:'IBM Plex Mono', monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:0.06em; color:var(--ink-soft); opacity:0.7; margin:16px 0 6px; }
   .field-label:first-of-type{ margin-top:0; }
@@ -257,6 +260,11 @@
   #checklist-add{ display:flex; gap:8px; margin-top:8px; }
   #checklist-add input{ flex:1; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:7px 10px; color:var(--ink); }
   #attachments-grid{ display:flex; flex-wrap:wrap; gap:10px; }
+  #attachment-url-row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
+  #attachment-url-input{ flex:1; min-width:0; font-family:'IBM Plex Sans', sans-serif; font-size:13px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:8px 10px; color:var(--ink); }
+  #attachment-url-input:focus{ outline:none; border-color:var(--ink-soft); }
+  #attachment-url-status{ font-family:'IBM Plex Mono', monospace; font-size:11.5px; color:var(--ink-soft); margin-top:6px; }
+  #attachment-url-status.error{ color:var(--history); }
   .attachment-thumb{ position:relative; width:110px; height:110px; }
   .attachment-thumb img{ width:110px; height:110px; border-radius:10px; object-fit:cover; cursor:pointer; border:1px solid var(--parchment-line); box-shadow:0 2px 6px rgba(0,0,0,0.15); }
   .video-thumb{ width:110px; height:110px; border-radius:10px; background:var(--ink); color:var(--parchment); display:flex; align-items:center; justify-content:center; font-size:30px; cursor:pointer; border:1px solid var(--parchment-line); }
@@ -345,6 +353,7 @@
       </svg>
       <h1>Cairn</h1>
       <span id="count">0 waypoints</span>
+      <span id="sync-status" class="owner-only" style="display:none"></span>
     </div>
     <div id="header-right">
       <button class="pill-btn" id="btn-signin">Sign in</button>
@@ -490,6 +499,7 @@
     <div id="drawer-handle"></div>
     <div id="drawer-inner">
       <div id="drawer-top-row">
+        <button id="btn-save-offline" style="display:none">📌 Save offline</button>
         <button id="btn-drawer-edit" class="edit-trigger">✎ edit</button>
         <button id="btn-drawer-minimize">▾ minimize</button>
         <button id="drawer-close">✕ close</button>
@@ -498,15 +508,6 @@
       <input id="f-title" placeholder="Name this place">
       <div class="field-label">Category</div>
       <div id="cat-select"></div>
-      <div class="field-label">Find a place (optional)</div>
-      <input id="f-place-search" type="text" placeholder="Search a road, village, landmark…" autocomplete="off">
-      <div id="place-search-results"></div>
-      <div class="field-label">Coordinates</div>
-      <input id="f-coords" type="text" placeholder="55.699391, -4.904652">
-      <div id="coord-sub">Paste straight from Google Maps: latitude, longitude</div>
-      <div class="field-label">Trip / group (optional)</div>
-      <input id="f-group" type="text" list="group-suggestions" placeholder="e.g. Skye 2027">
-      <datalist id="group-suggestions"></datalist>
       <div id="attachments-section" style="display:none">
         <div class="field-label">Photos & scanned pages</div>
         <div id="attachments-grid"></div>
@@ -514,7 +515,21 @@
           <input type="file" id="attachment-file" accept="image/*,video/*" multiple style="display:none">
           <button class="btn small" id="btn-attachment-add">Add photos or scans</button>
         </div>
+        <div id="attachment-url-row" class="editor-only">
+          <input type="text" id="attachment-url-input" placeholder="…or paste an image URL" autocomplete="off">
+          <button class="btn small" id="btn-attachment-url-add">Import</button>
+        </div>
+        <div id="attachment-url-status" class="editor-only"></div>
       </div>
+      <div class="field-label">Find a place (optional)</div>
+      <input id="f-place-search" type="text" placeholder="Search a road, village, landmark…" autocomplete="off">
+      <div id="place-search-results"></div>
+      <div class="field-label">Coordinates</div>
+      <input id="f-coords" type="text" placeholder="55.699391, -4.904652">
+      <div id="coord-sub">Decimal (Google Maps) or DMS (Apple Maps “Copy Coordinates”)</div>
+      <div class="field-label">Trip / group (optional)</div>
+      <input id="f-group" type="text" list="group-suggestions" placeholder="e.g. Skye 2027">
+      <datalist id="group-suggestions"></datalist>
       <div class="field-label">Notes</div>
       <textarea id="f-notes" placeholder="What's the plan? Route ideas, best season, who to bring, where to stay…"></textarea>
       <div class="field-label editor-only">GPX route</div>
@@ -656,6 +671,8 @@ async function attemptSilentSignIn(){
     ensureEditorName();
     applyOwnerUI();
     applyFilters();
+    updateSyncStatusUI();
+    flushOfflineQueue();
   }
 }
 
@@ -870,6 +887,42 @@ function slimTripForSummary(t){
   return rest;
 }
 
+/* ---------- Offline edit queue ----------
+   Edits (the shared summary file, and each waypoint's own notes/checklist file)
+   are written to localStorage the moment they're made — before any network call
+   is attempted — so they survive a lost connection, a killed tab, or iOS
+   backgrounding the app mid-save. Anything still queued is retried automatically
+   once the connection is back. This only covers the two per-waypoint/summary
+   files Cairn already manages; it doesn't attempt true multi-editor conflict
+   resolution beyond what the app already does (whole-file replace, last save wins). */
+const OFFLINE_QUEUE_KEY = 'cairn:offlineQueue';
+function loadOfflineQueue(){
+  try{
+    const raw = JSON.parse(localStorage.getItem(OFFLINE_QUEUE_KEY));
+    if(raw && typeof raw === 'object') return { summary: raw.summary || null, details: raw.details || {} };
+  }catch(e){}
+  return { summary: null, details: {} };
+}
+let offlineQueue = loadOfflineQueue();
+function persistOfflineQueue(){
+  try{ localStorage.setItem(OFFLINE_QUEUE_KEY, JSON.stringify(offlineQueue)); }catch(e){}
+  updateSyncStatusUI();
+}
+function queuedChangeCount(){
+  return (offlineQueue.summary ? 1 : 0) + Object.keys(offlineQueue.details).length;
+}
+function updateSyncStatusUI(){
+  const el = document.getElementById('sync-status');
+  if(!el) return;
+  if(!isOwner){ el.style.display = 'none'; return; }
+  const n = queuedChangeCount();
+  if(n === 0){ el.style.display = 'none'; el.textContent = ''; return; }
+  el.style.display = 'inline';
+  el.textContent = navigator.onLine
+    ? ` · syncing ${n} change${n===1?'':'s'}…`
+    : ` · ${n} change${n===1?'':'s'} waiting to sync (offline)`;
+}
+
 function scheduleCloudSave(){
   clearTimeout(saveCloudTimer);
   saveCloudTimer = setTimeout(doCloudSave, 700);
@@ -877,17 +930,29 @@ function scheduleCloudSave(){
 
 async function doCloudSave(){
   if(!isOwner || !DATA_FILE_ID) return false;
+  // Snapshot and persist locally first — this is the durable copy that survives
+  // a lost connection or a killed tab even if the upload below never runs.
+  offlineQueue.summary = { trips: trips.map(slimTripForSummary), photos, photosFolderId: driveFolderId, improvements };
+  persistOfflineQueue();
+  return flushSummaryQueue();
+}
+
+async function flushSummaryQueue(){
+  if(!offlineQueue.summary || !isOwner || !DATA_FILE_ID) return false;
   const hint = document.getElementById('save-hint');
   try{
     await requestDriveToken();
-    const blob = new Blob([JSON.stringify({ trips: trips.map(slimTripForSummary), photos, photosFolderId: driveFolderId, improvements })], { type:'application/json' });
+    const blob = new Blob([JSON.stringify(offlineQueue.summary)], { type:'application/json' });
     await driveUpdateFileContent(DATA_FILE_ID, blob, 'application/json');
+    offlineQueue.summary = null;
+    persistOfflineQueue();
     hint.textContent = 'saved';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
     return true;
   }catch(e){
-    hint.textContent = 'could not save';
+    hint.textContent = navigator.onLine ? 'could not save' : 'offline — will sync later';
+    updateSyncStatusUI();
     return false;
   }
 }
@@ -917,25 +982,138 @@ function scheduleDetailSave(tripId){
 async function doDetailSave(tripId){
   const t = trips.find(tr=>tr.id===tripId);
   if(!t || !canEditTrip(t)) return;
+  // Persist locally first, same durability reasoning as the summary save above.
+  offlineQueue.details[tripId] = {
+    detailFileId: t.detailFileId || null,
+    title: t.title || 'waypoint',
+    notes: t.notes || '',
+    checklist: t.checklist || []
+  };
+  persistOfflineQueue();
+  return flushDetailQueue(tripId);
+}
+
+async function flushDetailQueue(tripId){
+  const entry = offlineQueue.details[tripId];
+  if(!entry) return true;
+  const t = trips.find(tr=>tr.id===tripId);
   const hint = document.getElementById('save-hint');
   try{
     await requestDriveToken();
-    const blob = new Blob([JSON.stringify({ notes: t.notes||'', checklist: t.checklist||[] })], { type:'application/json' });
-    if(!t.detailFileId){
+    const blob = new Blob([JSON.stringify({ notes: entry.notes, checklist: entry.checklist })], { type:'application/json' });
+    let fileId = entry.detailFileId;
+    if(!fileId){
       const folderId = await ensureAppFolder();
-      t.detailFileId = await driveCreateFile(blob, (t.title||'waypoint') + '-notes.json', folderId, 'application/json');
-      await driveSetPublic(t.detailFileId);
-      scheduleCloudSave();
+      fileId = await driveCreateFile(blob, entry.title + '-notes.json', folderId, 'application/json');
+      await driveSetPublic(fileId);
+      if(t) t.detailFileId = fileId;
+      scheduleCloudSave(); // the summary file needs the new detailFileId recorded too
     } else {
-      await driveUpdateFileContent(t.detailFileId, blob, 'application/json');
+      await driveUpdateFileContent(fileId, blob, 'application/json');
     }
+    delete offlineQueue.details[tripId];
+    persistOfflineQueue();
     hint.textContent = 'saved';
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{ hint.textContent=''; }, 1200);
+    return true;
   }catch(e){
-    hint.textContent = 'could not save';
+    hint.textContent = navigator.onLine ? 'could not save' : 'offline — will sync later';
+    updateSyncStatusUI();
+    return false;
   }
 }
+
+/* Retries anything still queued once we're back online — via the browser's
+   'online' event where available, plus a periodic safety-net check, since
+   that event isn't always reliable on mobile Safari after backgrounding. */
+async function flushOfflineQueue(){
+  if(!navigator.onLine || !isOwner) return;
+  if(offlineQueue.summary) await flushSummaryQueue();
+  for(const tripId of Object.keys(offlineQueue.details)){
+    await flushDetailQueue(tripId);
+  }
+}
+window.addEventListener('online', flushOfflineQueue);
+window.addEventListener('online', updateSyncStatusUI);
+window.addEventListener('offline', updateSyncStatusUI);
+setInterval(()=>{ if(navigator.onLine) flushOfflineQueue(); }, 30000);
+
+/* ---------- Per-pin "save offline" ----------
+   Proactively caches this waypoint's own detail file, GPX route, and photos so
+   the drawer still works with no signal — useful for trip prep before losing
+   signal. The actual caching is delegated to the service worker (via
+   postMessage) rather than duplicated here, since sw.js owns CACHE_NAME and
+   its version gets bumped independently — writing into a hardcoded cache name
+   from this file would silently drift out of sync the next time that changes. */
+function loadOfflinePinned(){
+  try{
+    const raw = JSON.parse(localStorage.getItem('cairn:offlinePinned'));
+    return new Set(Array.isArray(raw) ? raw : []);
+  }catch(e){ return new Set(); }
+}
+let offlinePinned = loadOfflinePinned();
+function persistOfflinePinned(){
+  try{ localStorage.setItem('cairn:offlinePinned', JSON.stringify([...offlinePinned])); }catch(e){}
+}
+
+function pinUrlsForOffline(urls){
+  return new Promise((resolve)=>{
+    if(!('serviceWorker' in navigator) || !navigator.serviceWorker.controller || !urls.length){
+      resolve(false);
+      return;
+    }
+    let settled = false;
+    const done = (e)=>{
+      if(e.data && e.data.type === 'CAIRN_PIN_URLS_DONE'){
+        settled = true;
+        navigator.serviceWorker.removeEventListener('message', done);
+        resolve(true);
+      }
+    };
+    navigator.serviceWorker.addEventListener('message', done);
+    navigator.serviceWorker.controller.postMessage({ type:'CAIRN_PIN_URLS', urls });
+    // Don't hang forever if the service worker never acknowledges.
+    setTimeout(()=>{ if(!settled){ navigator.serviceWorker.removeEventListener('message', done); resolve(true); } }, 8000);
+  });
+}
+
+function waypointOfflineUrls(trip){
+  const urls = [];
+  if(trip.detailFileId) urls.push(publicFileUrl(trip.detailFileId));
+  if(trip.gpxFileId) urls.push(publicFileUrl(trip.gpxFileId));
+  (trip.attachments || []).forEach(a => urls.push(publicFileUrl(a.id)));
+  return urls;
+}
+
+function renderOfflinePinButton(trip){
+  const btn = document.getElementById('btn-save-offline');
+  if(!trip){ btn.style.display = 'none'; return; }
+  btn.style.display = 'inline-flex';
+  btn.disabled = false;
+  const pinned = offlinePinned.has(trip.id);
+  btn.classList.toggle('active', pinned);
+  btn.textContent = pinned ? '📌 Saved offline' : '📌 Save offline';
+}
+
+document.getElementById('btn-save-offline').onclick = async ()=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  if(!t) return;
+  const btn = document.getElementById('btn-save-offline');
+  if(offlinePinned.has(t.id)){
+    offlinePinned.delete(t.id);
+    persistOfflinePinned();
+    renderOfflinePinButton(t);
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = 'Saving for offline…';
+  await loadTripDetail(t); // in case the drawer only just opened and this hasn't resolved yet
+  await pinUrlsForOffline(waypointOfflineUrls(t));
+  offlinePinned.add(t.id);
+  persistOfflinePinned();
+  renderOfflinePinButton(t);
+};
 
 /* ---------- Owner sign-in ---------- */
 
@@ -986,13 +1164,19 @@ document.getElementById('btn-signin').onclick = async ()=>{
     if(!DATA_FILE_ID){
       if(confirm('No shared storage found yet. Set it up now?')) await bootstrapSharedStorage();
     }
+    updateSyncStatusUI();
+    flushOfflineQueue();
   }catch(e){
     alert("Couldn't sign in — make sure you're using the Google account this app was set up with.");
   }
 };
 
 document.getElementById('btn-signout').onclick = ()=>{
-  if(!confirm('Sign out of Cairn on this device?')) return;
+  const pending = queuedChangeCount();
+  const warning = pending
+    ? `You have ${pending} unsynced change${pending===1?'':'s'} that haven't reached Drive yet. They'll stay saved on this device and sync next time you're signed in and online. Sign out anyway?`
+    : 'Sign out of Cairn on this device?';
+  if(!confirm(warning)) return;
   const tokenToRevoke = driveAccessToken;
   isOwner = false;
   driveAccessToken = null;
@@ -1000,6 +1184,7 @@ document.getElementById('btn-signout').onclick = ()=>{
   applyOwnerUI();
   applyFilters();
   closeDrawer();
+  updateSyncStatusUI();
   if(tokenToRevoke && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
     try{ google.accounts.oauth2.revoke(tokenToRevoke, ()=>{}); }catch(e){}
   }
@@ -1678,7 +1863,7 @@ function openDrawer(id, isNew, latlng){
   document.getElementById('gpx-file').value = '';
   document.getElementById('tide-info').textContent = '';
   document.getElementById('weather-detail').textContent = '';
-  document.getElementById('coord-sub').textContent = "Paste straight from Google Maps: latitude, longitude";
+  document.getElementById('coord-sub').textContent = "Decimal (Google Maps) or DMS (Apple Maps “Copy Coordinates”)";
   document.getElementById('f-place-search').value = '';
   document.getElementById('place-search-results').innerHTML = '';
   const drawer = document.getElementById('drawer');
@@ -1702,6 +1887,7 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('attachments-section').style.display = 'none';
     document.getElementById('tides-section').style.display = 'none';
     document.getElementById('save-first-note').style.display = 'block';
+    renderOfflinePinButton(null);
   } else {
     pendingId = id;
     const t = trips.find(tr=>tr.id===id);
@@ -1719,6 +1905,7 @@ function openDrawer(id, isNew, latlng){
     document.getElementById('attachments-section').style.display = 'block';
     document.getElementById('tides-section').style.display = (t.category === 'sea') ? 'block' : 'none';
     document.getElementById('save-first-note').style.display = 'none';
+    renderOfflinePinButton(t);
     t.attachments = t.attachments || [];
     renderAttachments(t);
     if(t.detailLoaded){
@@ -2051,6 +2238,55 @@ function removeAttachment(trip, id){
   scheduleCloudSave();
   renderAttachments(trip);
 }
+// Fetches an image from an arbitrary URL and attaches it the same way a manual
+// upload would. This only works when the image's host allows cross-origin
+// fetches (CORS) — many sites (including plenty of search-result thumbnails)
+// don't, and there's no way to detect that in advance or work around it from
+// a static site with no backend of its own. On failure we tell the user
+// plainly and point them at the manual upload button instead of failing silently.
+async function importAttachmentFromUrl(trip, rawUrl){
+  const statusEl = document.getElementById('attachment-url-status');
+  const btn = document.getElementById('btn-attachment-url-add');
+  const input = document.getElementById('attachment-url-input');
+
+  let parsed;
+  try{ parsed = new URL(rawUrl); }
+  catch(e){
+    statusEl.classList.add('error');
+    statusEl.textContent = "That doesn't look like a valid URL.";
+    return;
+  }
+  if(parsed.protocol !== 'http:' && parsed.protocol !== 'https:'){
+    statusEl.classList.add('error');
+    statusEl.textContent = 'Only http(s) image links are supported.';
+    return;
+  }
+
+  btn.disabled = true;
+  statusEl.classList.remove('error');
+  statusEl.textContent = 'Fetching image…';
+  try{
+    const res = await fetch(rawUrl);
+    if(!res.ok) throw new Error('fetch failed: ' + res.status);
+    const blob = await res.blob();
+    const contentType = blob.type || res.headers.get('content-type') || '';
+    if(!contentType.startsWith('image/')) throw new Error('not an image');
+
+    const ext = (contentType.split('/')[1] || 'jpg').split(';')[0];
+    const rawName = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
+    const filename = rawName && /\.[a-zA-Z0-9]+$/.test(rawName) ? rawName : `${rawName || 'imported-image'}.${ext}`;
+    const file = new File([blob], filename, { type: contentType });
+
+    await addAttachmentFiles(trip, [file]);
+    statusEl.textContent = 'Added.';
+    input.value = '';
+  }catch(e){
+    statusEl.classList.add('error');
+    statusEl.textContent = "Couldn't fetch that image directly — the site may block it. Try saving the image and using \u201CAdd photos or scans\u201D instead.";
+  }finally{
+    btn.disabled = false;
+  }
+}
 let currentVideoObjectUrl = null;
 async function loadVideoIntoPlayer(videoEl, fileId){
   videoEl.removeAttribute('src');
@@ -2141,6 +2377,17 @@ document.getElementById('attachment-file').onchange = (e)=>{
   if(t && e.target.files.length) addAttachmentFiles(t, Array.from(e.target.files));
   e.target.value = '';
 };
+document.getElementById('btn-attachment-url-add').onclick = ()=>{
+  const t = trips.find(tr=>tr.id===currentId);
+  const url = document.getElementById('attachment-url-input').value.trim();
+  if(t && url) importAttachmentFromUrl(t, url);
+};
+document.getElementById('attachment-url-input').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter'){
+    e.preventDefault();
+    document.getElementById('btn-attachment-url-add').click();
+  }
+});
 document.getElementById('f-notes').addEventListener('input', ()=>{
   if(!canEditCurrentDrawer() || !currentId) return;
   const t = trips.find(tr=>tr.id===currentId);
@@ -2182,28 +2429,62 @@ function extractPhotoMeta(blob){
   });
 }
 let placeSearchTimer = null;
+// Builds a readable label from a Photon result's properties, in roughly the same
+// "specific -> general" order Nominatim's display_name used, de-duped so a
+// venue whose name matches its street/city doesn't repeat itself.
+function photonResultLabel(props){
+  const parts = [
+    props.name,
+    [props.housenumber, props.street].filter(Boolean).join(' '),
+    props.city || props.town || props.village,
+    props.state,
+    props.country
+  ].filter(Boolean);
+  return [...new Set(parts)].join(', ');
+}
 async function runPlaceSearch(query){
   const box = document.getElementById('place-search-results');
   if(!query || query.trim().length < 3){ box.innerHTML = ''; return; }
   try{
-    const url = `https://nominatim.openstreetmap.org/search?format=json&limit=6&countrycodes=gb,ie&q=${encodeURIComponent(query.trim())}`;
+    // Photon (komoot's OSM-based geocoder) does typo-tolerant, search-as-you-type
+    // matching that handles informal place/business names noticeably better than
+    // Nominatim's plain string search. Bias results to the current map view and
+    // restrict to the UK+Ireland bounding box, same area Cairn is locked to.
+    const center = map.getCenter();
+    const sw = UK_IRELAND_BOUNDS.getSouthWest();
+    const ne = UK_IRELAND_BOUNDS.getNorthEast();
+    const params = new URLSearchParams({
+      q: query.trim(),
+      limit: '8',
+      lat: String(center.lat),
+      lon: String(center.lng),
+      bbox: `${sw.lng},${sw.lat},${ne.lng},${ne.lat}`
+    });
+    const url = `https://photon.komoot.io/api/?${params.toString()}`;
     const res = await fetch(url);
     if(!res.ok) throw new Error('search failed');
-    const results = await res.json();
+    const data = await res.json();
+    const results = (data.features || [])
+      .map(f => {
+        const [lon, lat] = f.geometry.coordinates;
+        const label = photonResultLabel(f.properties || {});
+        return label ? { label, lat, lon } : null;
+      })
+      .filter(Boolean);
     if(!results.length){ box.innerHTML = '<div class="place-result">No matches found</div>'; return; }
     box.innerHTML = '';
     results.forEach(r=>{
       const row = document.createElement('div');
       row.className = 'place-result';
-      row.textContent = r.display_name;
+      row.textContent = r.label;
       row.addEventListener('mousedown', (ev)=>{
         ev.preventDefault();
-        document.getElementById('f-coords').value = `${parseFloat(r.lat).toFixed(6)}, ${parseFloat(r.lon).toFixed(6)}`;
+        document.getElementById('f-coords').value = `${r.lat.toFixed(6)}, ${r.lon.toFixed(6)}`;
         document.getElementById('f-coords').classList.remove('invalid');
         if(!document.getElementById('f-title').value.trim()){
-          document.getElementById('f-title').value = r.display_name.split(',')[0];
+          document.getElementById('f-title').value = r.label.split(',')[0];
         }
-        document.getElementById('f-place-search').value = r.display_name;
+        document.getElementById('f-place-search').value = r.label;
         box.innerHTML = '';
       });
       box.appendChild(row);
@@ -2763,6 +3044,64 @@ document.querySelectorAll('#gallery-filters button').forEach(btn=>{
   };
 });
 
+/* ---------- Coordinate parsing (decimal + DMS) ---------- */
+
+// Matches a single degrees/minutes/seconds token with a hemisphere letter, e.g.
+// N 55° 48' 22.519'' or 55°48'22.519"N — tolerant of straight/curly quote
+// variants and spacing, since these get typed or copy-pasted from different sources.
+function parseDmsToken(hemi, deg, min, sec){
+  deg = parseFloat(deg); min = parseFloat(min); sec = parseFloat(sec);
+  if(!Number.isFinite(deg) || !Number.isFinite(min) || !Number.isFinite(sec)) return null;
+  let val = deg + (min/60) + (sec/3600);
+  if(hemi === 'S' || hemi === 'W') val = -val;
+  return val;
+}
+
+// Apple Maps' "Copy Coordinates" format: N 55° 48' 22.519'' W 4° 15' 51.943''
+// The hemisphere letter can lead or trail each token depending on source, and
+// ' / '' vary between straight and curly quote characters. Leading and trailing
+// forms are tried as two separate passes (rather than one combined optional-both
+// regex) because an ambiguous combined pattern lets the trailing-hemisphere group
+// of one token swallow the next token's leading hemisphere letter.
+function parseDmsCoords(value){
+  const leadingRe = /([NSEWnsew])\s*(\d{1,3}(?:\.\d+)?)\s*[°ºo]\s*(\d{1,2}(?:\.\d+)?)\s*['’′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:''|"|″|’’)?/g;
+  const trailingRe = /(\d{1,3}(?:\.\d+)?)\s*[°ºo]\s*(\d{1,2}(?:\.\d+)?)\s*['’′]\s*(\d{1,2}(?:\.\d+)?)\s*(?:''|"|″|’’)?\s*([NSEWnsew])/g;
+
+  const build = matches => {
+    if(matches.length !== 2) return null;
+    let lat = null, lng = null;
+    for(const m of matches){
+      const val = parseDmsToken(m.hemi.toUpperCase(), m.deg, m.min, m.sec);
+      if(val === null) return null;
+      if(m.hemi.toUpperCase() === 'N' || m.hemi.toUpperCase() === 'S') lat = val;
+      else lng = val;
+    }
+    if(lat === null || lng === null) return null;
+    return { lat, lng };
+  };
+
+  const leading = [...value.matchAll(leadingRe)].map(m => ({ hemi:m[1], deg:m[2], min:m[3], sec:m[4] }));
+  const fromLeading = build(leading);
+  if(fromLeading) return fromLeading;
+
+  const trailing = [...value.matchAll(trailingRe)].map(m => ({ hemi:m[4], deg:m[1], min:m[2], sec:m[3] }));
+  return build(trailing);
+}
+
+// Accepts either "lat, lng" decimal (pasted from Google Maps etc.) or Apple
+// Maps' DMS "Copy Coordinates" format. Returns {lat,lng} or null if neither parses.
+function parseCoordsInput(value){
+  if(!value || !value.trim()) return null;
+  const parts = value.split(',').map(s=>parseFloat(s.trim()));
+  if(parts.length === 2 && parts.every(Number.isFinite)){
+    const [lat, lng] = parts;
+    if(Math.abs(lat) <= 90 && Math.abs(lng) <= 180) return { lat, lng };
+  }
+  const dms = parseDmsCoords(value);
+  if(dms && Math.abs(dms.lat) <= 90 && Math.abs(dms.lng) <= 180) return dms;
+  return null;
+}
+
 /* ---------- Save / delete waypoint ---------- */
 
 document.getElementById('btn-save').onclick = async ()=>{
@@ -2777,14 +3116,23 @@ document.getElementById('btn-save').onclick = async ()=>{
     return;
   }
   const coordsField = document.getElementById('f-coords');
-  const parts = coordsField.value.split(',').map(s=>parseFloat(s.trim()));
-  const [lat, lng] = parts;
-  if(parts.length !== 2 || !Number.isFinite(lat) || !Number.isFinite(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180){
+  const parsedCoords = parseCoordsInput(coordsField.value);
+  if(!parsedCoords){
     coordsField.classList.add('invalid');
-    document.getElementById('save-hint').textContent = 'paste coordinates as: latitude, longitude';
+    document.getElementById('save-hint').textContent = 'paste coordinates as: latitude, longitude (decimal or DMS)';
     return;
   }
+  const { lat, lng } = parsedCoords;
   coordsField.classList.remove('invalid');
+
+  // Everything else about a save can be queued and synced later, but uploading
+  // a new GPX file is a real network operation happening right here — it can't
+  // be deferred without holding onto the (potentially large) route text
+  // indefinitely, so this one case still needs an active connection.
+  if(!navigator.onLine && pendingGpxAction === 'add'){
+    document.getElementById('save-hint').textContent = "Adding a GPX route needs a connection — try again once you're back online (everything else here will still save offline).";
+    return;
+  }
 
   const saveBtn = document.getElementById('btn-save');
   saveBtn.disabled = true;
@@ -2824,12 +3172,18 @@ document.getElementById('btn-save').onclick = async ()=>{
       markers[currentId].setIcon(makeIcon(category));
     }
 
-    document.getElementById('save-hint').textContent = 'Saving to Drive…';
+    document.getElementById('save-hint').textContent = 'Saving…';
     const saved = await doCloudSave();
-    if(!saved){
-      document.getElementById('save-hint').textContent = "Couldn't save — check your connection and try again.";
+    // A queued-but-not-yet-uploaded save (offline, or a transient network hiccup)
+    // is still durably saved on this device and will retry automatically — only
+    // treat it as a real dead end if we're online and it still failed, since
+    // that suggests something the automatic retry won't fix on its own (e.g.
+    // an auth problem) and the user may want to know right away.
+    if(!saved && navigator.onLine){
+      document.getElementById('save-hint').textContent = "Couldn't reach Drive — saved on this device, will keep retrying automatically.";
       return;
     }
+    document.getElementById('save-hint').textContent = saved ? 'saved' : "Saved on this device — will sync once you're back online.";
     applyFilters();
     renderList();
     refreshAllRoutesIfOn();
@@ -2857,13 +3211,22 @@ document.getElementById('btn-delete').onclick = async ()=>{
   trips = trips.filter(tr=>tr.id!==removedId);
   if(markers[removedId]){ map.removeLayer(markers[removedId]); delete markers[removedId]; }
   const saved = await doCloudSave();
-  if(!saved){
+  if(!saved && navigator.onLine){
+    // Genuine failure while online — revert, rather than risk queuing a delete
+    // against a Drive state we're not sure about (an auth problem, say).
     trips.push(existingTrip);
     addMarker(existingTrip);
     document.getElementById('save-hint').textContent = "Couldn't delete — check your connection and try again.";
     deleteBtn.disabled = false;
     return;
   }
+  // Committed to the delete (either synced now, or durably queued to sync
+  // later) — clean up anything else tied to this waypoint's id.
+  offlinePinned.delete(removedId);
+  persistOfflinePinned();
+  delete offlineQueue.details[removedId];
+  persistOfflineQueue();
+  document.getElementById('save-hint').textContent = saved ? 'Deleted' : "Deleted on this device — will sync once you're back online.";
   renderList();
   refreshAllRoutesIfOn();
   closeDrawer();
