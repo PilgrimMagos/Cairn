@@ -300,8 +300,7 @@
   body.can-edit-trip.is-editing-drawer div.editor-only, body.can-edit-trip.is-editing-drawer #checklist-add.editor-only{ display:flex; }
   .edit-trigger{ display:none; background:none; border:none; cursor:pointer; color:var(--ink-soft); font-size:13px; font-family:'IBM Plex Mono', monospace; padding:4px; opacity:0.65; align-items:center; gap:4px; }
   body.can-edit-trip:not(.is-editing-drawer) .edit-trigger{ display:inline-flex; }
-  #not-your-pin-note{ display:none; font-size:12.5px; color:var(--ink-soft); opacity:0.75; font-style:italic; margin-top:6px; }
-  body.is-owner:not(.can-edit-trip) #not-your-pin-note.showable{ display:block; }
+  #not-your-pin-note{ display:none; }
 
   @media (max-width: 700px){
     input, textarea, select{ font-size:16px !important; }
@@ -548,7 +547,7 @@
         </div>
       </div>
       <div id="save-first-note" style="display:none">Save this waypoint to add a checklist or photos.</div>
-      <div id="not-your-pin-note" class="showable">Added by someone else — only they can edit this one.</div>
+      <div id="not-your-pin-note"></div>
       <div id="drawer-actions">
         <button class="btn danger editor-only" id="btn-delete">Delete</button>
         <button class="btn" id="btn-cancel">Close</button>
@@ -1651,10 +1650,7 @@ function addMarker(trip){
 function hideHint(){ const h = document.getElementById('hint'); if(h) h.style.opacity='0'; }
 
 function canEditTrip(trip){
-  if(!isOwner) return false;
-  if(!trip) return true;
-  if(!trip.createdBy) return true;
-  return trip.createdBy === editorName;
+  return isOwner;
 }
 
 let isEditingDrawer = false;
@@ -1711,7 +1707,6 @@ function openDrawer(id, isNew, latlng){
     const t = trips.find(tr=>tr.id===id);
     isEditingDrawer = false;
     setDrawerOwnerState(t);
-    document.getElementById('not-your-pin-note').textContent = t.createdBy ? `Added by ${t.createdBy} — only they can edit this one.` : 'Added by someone else — only they can edit this one.';
     document.getElementById('f-title').value = t.title;
     document.getElementById('f-group').value = t.group || '';
     document.getElementById('f-coords').value = `${t.lat.toFixed(6)}, ${t.lng.toFixed(6)}`;
