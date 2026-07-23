@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cairn — Paddle Import</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="icon-192.png">
+<meta name="theme-color" content="#0f1e1c">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+  :root{
+    --ink:#0f1e1c; --ink-soft:#20342f;
+    --parchment:#faf3e0; --parchment-dim:#e9dfc3; --parchment-line: rgba(250,243,224,0.18);
+    --history:#c4460f; --history-dark:#822c08; --hike:#1f6b30;
+  }
+  *{box-sizing:border-box;}
+  html,body{ margin:0; min-height:100%; }
+  body{ font-family:'IBM Plex Sans', sans-serif; background:var(--ink); color:var(--parchment); padding:28px 16px 70px; }
+  .wrap{ max-width:640px; margin:0 auto; }
+  #signin-row{ display:flex; justify-content:flex-end; margin-bottom:16px; }
+  #btn-signin{ font-family:'IBM Plex Mono', monospace; font-size:12px; background:none; border:1px solid var(--parchment-line); color:var(--parchment-dim); padding:6px 12px; border-radius:20px; cursor:pointer; }
+  #btn-signin.owner{ color:var(--hike); border-color:var(--hike); }
+  header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:4px; }
+  h1{ font-family:'Fraunces', serif; font-style:italic; font-weight:600; font-size:28px; margin:0; }
+  header a{ color:var(--parchment-dim); font-family:'IBM Plex Mono', monospace; font-size:12px; text-decoration:none; border-bottom:1px solid var(--parchment-line); white-space:nowrap; }
+  .sub{ color:var(--parchment-dim); font-size:13.5px; line-height:1.5; margin:0 0 26px; }
+  section{ background:rgba(255,255,255,0.04); border:1px solid var(--parchment-line); border-radius:12px; padding:18px 20px; margin-bottom:16px; }
+  h2{ font-family:'Fraunces', serif; font-weight:600; font-size:16px; margin:0 0 10px; }
+  p{ font-size:13.5px; line-height:1.6; color:var(--parchment-dim); margin:0 0 10px; }
+  p:last-child{ margin-bottom:0; }
+  code{ font-family:'IBM Plex Mono', monospace; font-size:12px; background:rgba(255,255,255,0.08); padding:1px 5px; border-radius:4px; }
+  textarea{ width:100%; min-height:100px; font-family:'IBM Plex Mono', monospace; font-size:12px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:10px; color:var(--ink); resize:vertical; }
+  input[type=text]{ width:100%; font-family:'IBM Plex Sans', sans-serif; font-size:14px; border:1px solid var(--parchment-line); background:rgba(255,255,255,0.5); border-radius:8px; padding:9px 11px; color:var(--ink); }
+  input[type=text]:focus, textarea:focus{ outline:none; border-color:var(--parchment-dim); }
+  .btn{ font-family:'IBM Plex Sans', sans-serif; font-size:13px; font-weight:500; padding:9px 16px; border-radius:8px; cursor:pointer; border:1px solid var(--parchment-line); background:transparent; color:var(--parchment); }
+  .btn.small{ font-size:12px; padding:7px 12px; }
+  .btn.primary{ background:var(--history); border-color:var(--history-dark); color:#fff; }
+  .btn:disabled{ opacity:0.4; cursor:default; }
+  .row{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+  .bookmarklet-btn{ display:inline-flex; align-items:center; gap:6px; background:var(--history); color:#fff; font-family:'IBM Plex Mono', monospace; font-size:13px; font-weight:500; padding:10px 16px; border-radius:8px; text-decoration:none; cursor:grab; border:1px solid var(--history-dark); }
+  #status{ font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--parchment-dim); min-height:18px; margin-top:6px; line-height:1.6; }
+  #status.error{ color:#e08a5f; }
+  #status.ok{ color:#8fbf8a; }
+  #preview{ display:none; }
+  .field-label{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.03em; text-transform:uppercase; color:var(--parchment-dim); margin:0 0 5px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div id="signin-row"><button id="btn-signin">Sign in with Google</button></div>
+  <header>
+    <h1>Paddle Import</h1>
+    <a href="./index.html">← back to Cairn</a>
+  </header>
+  <p class="sub">Pulls a route off PaddlePoints and drops it straight into your "Cairn GPX Routes" Drive folder — same folder Cairn already watches, so it shows up next time you hit "Check for new routes."</p>
+
+  <section>
+    <h2>1. Capture a route</h2>
+    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it, then click PaddlePoints' own "View" button — the route gets sent here on its own.</p>
+    <p><a class="bookmarklet-btn" id="bookmarklet-link" href="#">⛺ Cairn: Grab Route</a></p>
+    <p><button class="btn small" id="btn-show-bookmarklet-code">Dragging not working? Show the code to copy instead</button></p>
+    <textarea id="bookmarklet-code" style="display:none;" readonly onclick="this.select()"></textarea>
+    <p style="margin-top:10px;">This only watches requests already made by the page you're on — it doesn't add any new network calls of its own, and it stops working the moment you leave or refresh that page.</p>
+  </section>
+
+  <section>
+    <h2>2. Or paste it manually</h2>
+    <p>Dev Tools (F12) → Network tab → click "View" on the route → click the <code>admin-ajax.php</code> request → Response tab → copy the full text and paste it below.</p>
+    <textarea id="manual-json" placeholder="Paste the full JSON response here…"></textarea>
+    <div class="row" style="margin-top:10px;">
+      <button class="btn" id="btn-parse-manual">Parse</button>
+    </div>
+  </section>
+
+  <section id="preview">
+    <h2>Route ready to import</h2>
+    <div class="field-label">Route name</div>
+    <input type="text" id="route-title">
+    <p id="route-meta" style="margin-top:10px;"></p>
+    <div class="row" style="margin-top:14px;">
+      <button class="btn primary" id="btn-save">Save to Cairn GPX Routes</button>
+    </div>
+  </section>
+
+  <div id="status"></div>
+</div>
+
+<script>
+/* ---------- Drive auth + upload (same pattern as Cairn's own index.html,
+   reused deliberately so this stays a thin, independent tool rather than a
+   second copy of app logic that could drift out of sync). ---------- */
+const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive';
+const GPX_FOLDER_NAME = 'Cairn GPX Routes';
+let gpxFolderId = localStorage.getItem('cairn:gpxFolderId') || '';
+let driveTokenClient = null;
+let driveAccessToken = null;
+let driveTokenExpiresAt = 0;
+let isOwner = false;
+let parsedRoute = null; // { title, segments, pointCount }
+
+function setStatus(msg, kind){
+  const el = document.getElementById('status');
+  el.textContent = msg || '';
+  el.className = kind || '';
+}
+
+function initDriveAuth(){
+  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: ()=>{},
+  });
+}
+
+function requestDriveToken(){
+  return new Promise((resolve, reject)=>{
+    if(driveAccessToken && Date.now() < driveTokenExpiresAt - 60000){ resolve(driveAccessToken); return; }
+    if(!driveTokenClient){ reject(new Error('Google sign-in not ready yet — try again in a moment.')); return; }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      driveAccessToken = resp.access_token;
+      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      isOwner = true;
+      applySignInUI();
+      resolve(driveAccessToken);
+    };
+    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
+  });
+}
+
+function applySignInUI(){
+  const btn = document.getElementById('btn-signin');
+  btn.textContent = isOwner ? 'Signed in ✓' : 'Sign in with Google';
+  btn.classList.toggle('owner', isOwner);
+}
+
+document.getElementById('btn-signin').onclick = async ()=>{
+  try{ await requestDriveToken(); }
+  catch(e){ setStatus("Couldn't sign in — make sure you're using the Google account Cairn is set up with.", 'error'); }
+};
+
+async function driveFindFile(query){
+  const q = encodeURIComponent(query);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  });
+  if(!res.ok) throw new Error('search failed ' + res.status);
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+
+async function driveSetPublic(fileId){
+  try{
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ role:'reader', type:'anyone' }),
+    });
+  }catch(e){}
+}
+
+async function driveCreateFile(blob, filename, parentId, mimeType){
+  const metadata = { name: filename };
+  if(parentId) metadata.parents = [parentId];
+  const boundary = '-------cairnBoundary' + Date.now();
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+  const metaPart = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata);
+  const mediaPartHeader = delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
+  const bodyBlob = new Blob([metaPart, mediaPartHeader, blob, closeDelim]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: bodyBlob,
+  });
+  if(!res.ok) throw new Error('create failed ' + res.status);
+  const data = await res.json();
+  return data.id;
+}
+
+async function ensureGpxFolder(){
+  if(gpxFolderId) return gpxFolderId;
+  let folder = await driveFindFile(`name='${GPX_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(!folder){
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: GPX_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }),
+    });
+    const data = await res.json();
+    folder = { id: data.id };
+    await driveSetPublic(folder.id);
+  }
+  gpxFolderId = folder.id;
+  localStorage.setItem('cairn:gpxFolderId', gpxFolderId);
+  return gpxFolderId;
+}
+
+/* ---------- Parsing a PaddlePoints admin-ajax.php response ----------
+   Real captured shape: {"Polys":[{"PolyString":"lat lon,lat lon,..."}],
+   "Title":"...", "RouteMarkup":"<html...Distance...>", "Result":"OK"}.
+   Also tolerates a "PolyPointArray": [[lat,lon], ...] shape as a fallback,
+   in case this varies by route or the site changes. Title always ends up in
+   an editable field afterward rather than trusted blindly, since RouteMarkup
+   doesn't reliably label the title with its own tag. */
+function parsePaddlePointsJson(raw){
+  let data;
+  try{ data = JSON.parse(raw); }
+  catch(e){ throw new Error("Couldn't parse that as JSON — make sure you copied the full response text."); }
+
+  const polys = Array.isArray(data.Polys) ? data.Polys : [];
+  if(!polys.length) throw new Error('No "Polys" array found in that response — this doesn\'t look like a PaddlePoints route.');
+
+  const segments = [];
+  polys.forEach(poly=>{
+    let pts = [];
+    if(typeof poly.PolyString === 'string'){
+      pts = poly.PolyString.split(',').map(pair=>{
+        const nums = pair.trim().split(/\s+/).map(Number);
+        return (nums.length === 2 && nums.every(Number.isFinite)) ? nums : null;
+      }).filter(Boolean);
+    } else if(Array.isArray(poly.PolyPointArray)){
+      pts = poly.PolyPointArray.map(pair=>{
+        const lat = Number(pair[0]), lon = Number(pair[1]);
+        return (Number.isFinite(lat) && Number.isFinite(lon)) ? [lat, lon] : null;
+      }).filter(Boolean);
+    }
+    if(pts.length) segments.push(pts);
+  });
+  if(!segments.length) throw new Error('Found "Polys" but no usable coordinates inside it — the response format may have changed.');
+
+  let title = (typeof data.Title === 'string' && data.Title.trim()) ? data.Title.trim() : '';
+  if(!title && typeof data.RouteMarkup === 'string'){
+    const m = data.RouteMarkup.match(/data-route-id='(\d+)'/);
+    title = m ? `PaddlePoints route ${m[1]}` : '';
+  }
+  if(!title) title = 'Imported route';
+
+  const pointCount = segments.reduce((n, s) => n + s.length, 0);
+  return { title, segments, pointCount };
+}
+
+function buildGpx(title, segments){
+  const esc = s => String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  const segXml = segments.map(pts =>
+    '<trkseg>' + pts.map(([lat, lon]) => `<trkpt lat="${lat}" lon="${lon}"></trkpt>`).join('') + '</trkseg>'
+  ).join('');
+  return `<?xml version="1.0" encoding="UTF-8"?>\n<gpx version="1.1" creator="Cairn Paddle Import" xmlns="http://www.topografix.com/GPX/1/1">\n<trk><name>${esc(title)}</name>${segXml}</trk>\n</gpx>`;
+}
+
+function sanitizeFilename(name){
+  return (name || 'route').replace(/[\\/:*?"<>|]+/g, '').replace(/\s+/g, ' ').trim().slice(0, 80) || 'route';
+}
+
+function showPreview(route){
+  parsedRoute = route;
+  document.getElementById('route-title').value = route.title;
+  document.getElementById('route-meta').textContent =
+    `${route.pointCount} points across ${route.segments.length} segment${route.segments.length === 1 ? '' : 's'}.`;
+  document.getElementById('preview').style.display = 'block';
+  document.getElementById('preview').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+
+document.getElementById('btn-parse-manual').onclick = ()=>{
+  const raw = document.getElementById('manual-json').value.trim();
+  if(!raw){ setStatus('Paste the JSON response first.', 'error'); return; }
+  try{
+    showPreview(parsePaddlePointsJson(raw));
+    setStatus('', '');
+  }catch(e){
+    setStatus(e.message, 'error');
+  }
+};
+
+document.getElementById('btn-save').onclick = async ()=>{
+  if(!parsedRoute) return;
+  const btn = document.getElementById('btn-save');
+  btn.disabled = true;
+  setStatus('Signing in…', '');
+  try{
+    await requestDriveToken();
+    setStatus('Finding your GPX Routes folder…', '');
+    const folderId = await ensureGpxFolder();
+    const title = document.getElementById('route-title').value.trim() || 'Imported route';
+    const gpxText = buildGpx(title, parsedRoute.segments);
+    const blob = new Blob([gpxText], { type:'application/gpx+xml' });
+    setStatus('Uploading…', '');
+    const fileId = await driveCreateFile(blob, sanitizeFilename(title) + '.gpx', folderId, 'application/gpx+xml');
+    await driveSetPublic(fileId);
+    setStatus(`Saved "${sanitizeFilename(title)}.gpx" to Cairn GPX Routes. Open Cairn and hit "Check for new routes" to bring it in.`, 'ok');
+  }catch(e){
+    setStatus("Couldn't save — check your connection and try again. (" + e.message + ")", 'error');
+  }finally{
+    btn.disabled = false;
+  }
+};
+
+/* ---------- Receiving a route sent over from the bookmarklet ---------- */
+function isTrustedPaddlePointsOrigin(origin){
+  try{
+    const host = new URL(origin).hostname;
+    return host === 'paddlepoints.net' || host.endsWith('.paddlepoints.net');
+  }catch(e){ return false; }
+}
+window.addEventListener('message', (event)=>{
+  if(!isTrustedPaddlePointsOrigin(event.origin)) return;
+  if(!event.data || event.data.type !== 'CAIRN_PADDLEPOINTS_ROUTE') return;
+  try{ event.source.postMessage({ type:'CAIRN_PADDLEPOINTS_ACK' }, event.origin); }catch(e){}
+  try{
+    showPreview(parsePaddlePointsJson(event.data.raw));
+    setStatus('Route received from PaddlePoints.', 'ok');
+  }catch(e){
+    setStatus(e.message, 'error');
+  }
+});
+
+/* ---------- Bookmarklet ----------
+   Runs on paddlepoints.net itself when clicked, so there's no CORS wall —
+   it watches requests the page already makes (both fetch and XHR, since
+   WordPress sites often use jQuery's $.ajax under the hood) for the
+   admin-ajax.php route call, then hands the raw response across via
+   postMessage with a short retry window to cover the new tab still loading. */
+(function setUpBookmarklet(){
+  const TARGET_ORIGIN = location.origin;
+  const IMPORT_URL = location.origin + location.pathname;
+  const src = `(function(){
+    if(window.__cairnPaddleHook){ alert('Cairn import is already watching this page \u2014 click "View" on a route now.'); return; }
+    window.__cairnPaddleHook = true;
+    var TARGET_ORIGIN = ${JSON.stringify(TARGET_ORIGIN)};
+    var IMPORT_URL = ${JSON.stringify(IMPORT_URL)};
+    function banner(msg){
+      var b = document.getElementById('__cairnBanner');
+      if(!b){
+        b = document.createElement('div');
+        b.id = '__cairnBanner';
+        b.style.cssText = 'position:fixed;top:12px;right:12px;z-index:2147483647;background:#0f1e1c;color:#faf3e0;font:13px -apple-system,sans-serif;padding:10px 14px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.35);max-width:280px;';
+        document.body.appendChild(b);
+      }
+      b.textContent = msg;
+    }
+    banner('Cairn: watching \u2014 click "View" on a route now.');
+    function handleCaptured(text){
+      var data;
+      try{ data = JSON.parse(text); }catch(e){ return false; }
+      if(!data || !data.Polys || !data.Polys.length) return false;
+      banner('Cairn: route captured, opening import tab\u2026');
+      var win = window.open(IMPORT_URL, 'cairnPaddleImport');
+      if(!win){ banner('Cairn: popup blocked \u2014 allow popups for this site and click View again.'); return true; }
+      var tries = 0;
+      var timer = setInterval(function(){
+        tries++;
+        try{ win.postMessage({ type:'CAIRN_PADDLEPOINTS_ROUTE', raw:text }, TARGET_ORIGIN); }catch(e){}
+        if(tries > 30) clearInterval(timer);
+      }, 300);
+      window.addEventListener('message', function ack(e){
+        if(e.origin === TARGET_ORIGIN && e.data && e.data.type === 'CAIRN_PADDLEPOINTS_ACK'){
+          clearInterval(timer);
+          banner('Cairn: sent \u2014 switch to the import tab to save it.');
+          window.removeEventListener('message', ack);
+        }
+      });
+      return true;
+    }
+    var origFetch = window.fetch;
+    if(origFetch){
+      window.fetch = function(){
+        var args = arguments;
+        return origFetch.apply(this, args).then(function(res){
+          var url = (args[0] && args[0].url) || args[0] || '';
+          if(String(url).indexOf('admin-ajax.php') !== -1){ res.clone().text().then(handleCaptured); }
+          return res;
+        });
+      };
+    }
+    var origOpen = XMLHttpRequest.prototype.open;
+    var origSend = XMLHttpRequest.prototype.send;
+    XMLHttpRequest.prototype.open = function(method, url){
+      this.__cairnUrl = url;
+      return origOpen.apply(this, arguments);
+    };
+    XMLHttpRequest.prototype.send = function(){
+      var self = this;
+      if(this.__cairnUrl && String(this.__cairnUrl).indexOf('admin-ajax.php') !== -1){
+        this.addEventListener('load', function(){ try{ handleCaptured(self.responseText); }catch(e){} });
+      }
+      return origSend.apply(this, arguments);
+    };
+  })();`;
+  const uri = 'javascript:' + encodeURIComponent(src);
+  document.getElementById('bookmarklet-link').href = uri;
+  document.getElementById('bookmarklet-code').value = uri;
+})();
+
+document.getElementById('btn-show-bookmarklet-code').onclick = ()=>{
+  const ta = document.getElementById('bookmarklet-code');
+  ta.style.display = ta.style.display === 'none' ? 'block' : 'none';
+};
+
+initDriveAuth();
+</script>
+</body>
+</html>
