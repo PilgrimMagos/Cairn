@@ -8,6 +8,7 @@
 <meta name="theme-color" content="#0f1e1c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --ink:#0f1e1c; --ink-soft:#20342f;
@@ -76,6 +77,7 @@
     <p id="route-meta" style="margin-top:10px;"></p>
     <div class="row" style="margin-top:14px;">
       <button class="btn primary" id="btn-download">Download GPX</button>
+      <button class="btn" id="btn-send-drive">Send to Drive</button>
     </div>
   </section>
 
@@ -89,6 +91,99 @@ function setStatus(msg, kind){
   const el = document.getElementById('status');
   el.textContent = msg || '';
   el.className = kind || '';
+}
+
+/* ---------- Drive auth + upload (same pattern as Cairn's own index.html) ----------
+   Deliberately simple: no silent/automatic sign-in on page load — that caused
+   real confusion in an earlier version (looked "stuck" with no visible cause).
+   Signing in only ever happens as a direct result of clicking "Send to Drive",
+   so there's always a clear action and a clear status message tied to it. */
+const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive';
+const GPX_FOLDER_NAME = 'Cairn GPX Routes';
+let gpxFolderId = localStorage.getItem('cairn:gpxFolderId') || '';
+let driveTokenClient = null;
+let driveAccessToken = null;
+let driveTokenExpiresAt = 0;
+
+function initDriveAuth(){
+  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
+  driveTokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: ()=>{},
+  });
+}
+
+function requestDriveToken(){
+  return new Promise((resolve, reject)=>{
+    if(driveAccessToken && Date.now() < driveTokenExpiresAt - 60000){ resolve(driveAccessToken); return; }
+    if(!driveTokenClient){ reject(new Error('Google sign-in not ready yet — try again in a moment.')); return; }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      driveAccessToken = resp.access_token;
+      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      resolve(driveAccessToken);
+    };
+    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
+  });
+}
+
+async function driveFindFile(query){
+  const q = encodeURIComponent(query);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + driveAccessToken }
+  });
+  if(!res.ok) throw new Error('search failed ' + res.status);
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+
+async function driveSetPublic(fileId){
+  try{
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ role:'reader', type:'anyone' }),
+    });
+  }catch(e){}
+}
+
+async function driveCreateFile(blob, filename, parentId, mimeType){
+  const metadata = { name: filename };
+  if(parentId) metadata.parents = [parentId];
+  const boundary = '-------cairnBoundary' + Date.now();
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+  const metaPart = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata);
+  const mediaPartHeader = delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
+  const bodyBlob = new Blob([metaPart, mediaPartHeader, blob, closeDelim]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: bodyBlob,
+  });
+  if(!res.ok) throw new Error('create failed ' + res.status);
+  const data = await res.json();
+  return data.id;
+}
+
+async function ensureGpxFolder(){
+  if(gpxFolderId) return gpxFolderId;
+  let folder = await driveFindFile(`name='${GPX_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(!folder){
+    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ name: GPX_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }),
+    });
+    const data = await res.json();
+    folder = { id: data.id };
+    await driveSetPublic(folder.id);
+  }
+  gpxFolderId = folder.id;
+  localStorage.setItem('cairn:gpxFolderId', gpxFolderId);
+  return gpxFolderId;
 }
 
 /* ---------- Parsing a PaddlePoints admin-ajax.php response ----------
@@ -124,7 +219,10 @@ function parsePaddlePointsJson(raw){
   });
   if(!segments.length) throw new Error('Found "Polys" but no usable coordinates inside it — the response format may have changed.');
 
-  let title = (typeof data.Title === 'string' && data.Title.trim()) ? data.Title.trim() : '';
+  // The Title field isn't clean text — it comes with a leading marker span
+  // (e.g. "<span class='ppScreenMarker route'></span>Loch Shiel from...") —
+  // so tags need stripping before this is usable as a name.
+  let title = (typeof data.Title === 'string') ? data.Title.replace(/<[^>]*>/g, ' ').replace(/\s+/g, ' ').trim() : '';
   if(!title && typeof data.RouteMarkup === 'string'){
     const m = data.RouteMarkup.match(/data-route-id='(\d+)'/);
     title = m ? `PaddlePoints route ${m[1]}` : '';
@@ -181,6 +279,29 @@ document.getElementById('btn-download').onclick = ()=>{
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 2000);
   setStatus(`Downloaded "${sanitizeFilename(title)}.gpx" — drag it into your "Cairn GPX Routes" Drive folder, then hit "Check for new routes" in Cairn.`, 'ok');
+};
+
+document.getElementById('btn-send-drive').onclick = async ()=>{
+  if(!parsedRoute) return;
+  const btn = document.getElementById('btn-send-drive');
+  btn.disabled = true;
+  setStatus('Signing in…', '');
+  try{
+    await requestDriveToken();
+    setStatus('Finding your GPX Routes folder…', '');
+    const folderId = await ensureGpxFolder();
+    const title = document.getElementById('route-title').value.trim() || 'Imported route';
+    const gpxText = buildGpx(title, parsedRoute.segments);
+    const blob = new Blob([gpxText], { type:'application/gpx+xml' });
+    setStatus('Uploading…', '');
+    const fileId = await driveCreateFile(blob, sanitizeFilename(title) + '.gpx', folderId, 'application/gpx+xml');
+    await driveSetPublic(fileId);
+    setStatus(`Sent "${sanitizeFilename(title)}.gpx" to Cairn GPX Routes. Open Cairn and hit "Check for new routes" to bring it in.`, 'ok');
+  }catch(e){
+    setStatus("Couldn't send to Drive — check your connection and try again. (" + e.message + ")", 'error');
+  }finally{
+    btn.disabled = false;
+  }
 };
 
 /* ---------- Bookmarklet ----------
@@ -274,6 +395,8 @@ document.getElementById('btn-show-bookmarklet-code').onclick = ()=>{
   const ta = document.getElementById('bookmarklet-code');
   ta.style.display = ta.style.display === 'none' ? 'block' : 'none';
 };
+
+initDriveAuth();
 </script>
 </body>
 </html>
