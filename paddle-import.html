@@ -41,7 +41,6 @@
   #status.ok{ color:#8fbf8a; }
   #preview{ display:none; }
   .field-label{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.03em; text-transform:uppercase; color:var(--parchment-dim); margin:0 0 5px; }
-  #waiting-note{ display:none; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--hike); margin-top:10px; }
 </style>
 </head>
 <body>
@@ -54,18 +53,17 @@
 
   <section>
     <h2>1. Capture a route</h2>
-    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it — that opens this page in another tab and starts watching — then click PaddlePoints' own "View" button and the route gets sent over on its own.</p>
+    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it, then click PaddlePoints' own "View" button — the route's data gets copied to your clipboard on its own. Then come back here (or switch to this tab) and paste it into the box below.</p>
     <p><a class="bookmarklet-btn" id="bookmarklet-link" href="#">⛺ Cairn: Grab Route</a></p>
     <p><button class="btn small" id="btn-show-bookmarklet-code">Dragging not working? Show the code to copy instead</button></p>
     <textarea id="bookmarklet-code" style="display:none;" readonly onclick="this.select()"></textarea>
     <p style="margin-top:10px;">This only watches requests already made by the page you're on — it doesn't add any new network calls of its own, and it stops working the moment you leave or refresh that page.</p>
-    <p id="waiting-note">Watching this tab for a route sent from PaddlePoints…</p>
   </section>
 
   <section>
-    <h2>2. Or paste it manually</h2>
-    <p>Dev Tools (F12) → Network tab → click "View" on the route → click the <code>admin-ajax.php</code> request → Response tab → copy the full text and paste it below.</p>
-    <textarea id="manual-json" placeholder="Paste the full JSON response here…"></textarea>
+    <h2>2. Paste it here</h2>
+    <p>Either the clipboard text from step 1, or — if you'd rather do it by hand — Dev Tools (F12) → Network tab → click "View" on the route → click the <code>admin-ajax.php</code> request → Response tab → copy the full text.</p>
+    <textarea id="manual-json" placeholder="Paste the JSON here…"></textarea>
     <div class="row" style="margin-top:10px;">
       <button class="btn" id="btn-parse-manual">Parse</button>
     </div>
@@ -185,88 +183,61 @@ document.getElementById('btn-download').onclick = ()=>{
   setStatus(`Downloaded "${sanitizeFilename(title)}.gpx" — drag it into your "Cairn GPX Routes" Drive folder, then hit "Check for new routes" in Cairn.`, 'ok');
 };
 
-/* ---------- Receiving a route sent over from the bookmarklet ---------- */
-function isTrustedPaddlePointsOrigin(origin){
-  try{
-    const host = new URL(origin).hostname;
-    return host === 'paddlepoints.net' || host.endsWith('.paddlepoints.net');
-  }catch(e){ return false; }
-}
-window.addEventListener('message', (event)=>{
-  if(!isTrustedPaddlePointsOrigin(event.origin)) return;
-  if(!event.data || event.data.type !== 'CAIRN_PADDLEPOINTS_ROUTE') return;
-  try{ event.source.postMessage({ type:'CAIRN_PADDLEPOINTS_ACK' }, event.origin); }catch(e){}
-  try{
-    showPreview(parsePaddlePointsJson(event.data.raw));
-    setStatus('Route received from PaddlePoints.', 'ok');
-  }catch(e){
-    setStatus(e.message, 'error');
-  }
-});
-if(new URLSearchParams(location.search).get('src') === 'bookmarklet'){
-  document.getElementById('waiting-note').style.display = 'block';
-}
-
 /* ---------- Bookmarklet ----------
-   Runs on paddlepoints.net itself when clicked, so there's no CORS wall —
-   it watches requests the page already makes (both fetch and XHR, since
+   Runs on paddlepoints.net itself when clicked, so there's no CORS wall — it
+   watches requests the page already makes (both fetch and XHR, since
    WordPress sites often use jQuery's $.ajax under the hood) for the
-   admin-ajax.php route call, then hands the raw response across via
-   postMessage with a short retry window to cover the new tab still loading.
-   The import tab is opened exactly once, synchronously, at the moment the
-   bookmarklet itself is clicked — that's the one point in this whole flow
-   that's an unambiguous direct user gesture. Opening it later, inside the
-   async fetch/XHR response handler, is what silently gets blocked by most
-   browsers' popup blockers even though a human really did click "View" to
-   trigger it — that gesture chain is already broken by the time the network
-   response comes back. */
+   admin-ajax.php route call, then copies the raw response straight to the
+   clipboard. Deliberately not trying to hand the data to another tab directly
+   (via a new window or a live message) — that depends on a second tab being
+   open and actively listening at the right moment, which browsers can't
+   guarantee for a backgrounded tab. The clipboard has no such timing
+   requirement: it's just there whenever you paste, on your own schedule. */
 (function setUpBookmarklet(){
-  const TARGET_ORIGIN = location.origin;
-  const IMPORT_URL = location.origin + location.pathname + '?src=bookmarklet';
   const src = `(function(){
     if(window.__cairnPaddleHook){ alert('Cairn import is already watching this page \u2014 click "View" on a route now.'); return; }
     window.__cairnPaddleHook = true;
-    var TARGET_ORIGIN = ${JSON.stringify(TARGET_ORIGIN)};
-    var IMPORT_URL = ${JSON.stringify(IMPORT_URL)};
     function banner(msg){
       var b = document.getElementById('__cairnBanner');
       if(!b){
         b = document.createElement('div');
         b.id = '__cairnBanner';
-        b.style.cssText = 'position:fixed;top:12px;right:12px;z-index:2147483647;background:#0f1e1c;color:#faf3e0;font:13px -apple-system,sans-serif;padding:10px 14px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.35);max-width:280px;';
+        b.style.cssText = 'position:fixed;top:12px;right:12px;z-index:2147483647;background:#0f1e1c;color:#faf3e0;font:13px -apple-system,sans-serif;padding:10px 14px;border-radius:8px;box-shadow:0 4px 16px rgba(0,0,0,0.35);max-width:300px;';
         document.body.appendChild(b);
       }
       b.textContent = msg;
     }
-    var importWin = window.open(IMPORT_URL, 'cairnPaddleImport');
-    if(!importWin){
-      banner('Cairn: popup blocked \u2014 allow popups for this site, then click the bookmarklet again.');
-      window.__cairnPaddleHook = false;
-      return;
+    function fallbackCopy(text){
+      try{
+        var ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.position = 'fixed';
+        ta.style.left = '-9999px';
+        document.body.appendChild(ta);
+        ta.focus();
+        ta.select();
+        var ok = document.execCommand('copy');
+        document.body.removeChild(ta);
+        if(ok){ banner('Cairn: route copied \u2014 paste it into Paddle Import.'); return; }
+      }catch(e){}
+      window.prompt('Copy this (Ctrl/Cmd+C), then paste it into Paddle Import:', text);
     }
-    banner('Cairn: import tab ready \u2014 now click "View" on a route.');
+    function copyText(text){
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(text).then(function(){
+          banner('Cairn: route copied \u2014 paste it into Paddle Import.');
+        }, function(){ fallbackCopy(text); });
+      } else {
+        fallbackCopy(text);
+      }
+    }
+    banner('Cairn: watching \u2014 click "View" on a route now.');
     function handleCaptured(text){
       var data;
       try{ data = JSON.parse(text); }catch(e){ return false; }
       if(!data || !data.Polys || !data.Polys.length) return false;
-      if(importWin.closed){
-        banner('Cairn: import tab was closed \u2014 click the bookmarklet again to reopen it.');
-        return true;
-      }
-      banner('Cairn: route captured, sending\u2026');
-      var tries = 0;
-      var timer = setInterval(function(){
-        tries++;
-        try{ importWin.postMessage({ type:'CAIRN_PADDLEPOINTS_ROUTE', raw:text }, TARGET_ORIGIN); }catch(e){}
-        if(tries > 30) clearInterval(timer);
-      }, 300);
-      window.addEventListener('message', function ack(e){
-        if(e.origin === TARGET_ORIGIN && e.data && e.data.type === 'CAIRN_PADDLEPOINTS_ACK'){
-          clearInterval(timer);
-          banner('Cairn: sent \u2014 switch to the import tab to download it.');
-          window.removeEventListener('message', ack);
-        }
-      });
+      banner('Cairn: route captured, copying\u2026');
+      copyText(text);
       return true;
     }
     var origFetch = window.fetch;
