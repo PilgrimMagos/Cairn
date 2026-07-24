@@ -8,7 +8,6 @@
 <meta name="theme-color" content="#0f1e1c">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,500&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
-<script src="https://accounts.google.com/gsi/client" async defer></script>
 <style>
   :root{
     --ink:#0f1e1c; --ink-soft:#20342f;
@@ -19,9 +18,6 @@
   html,body{ margin:0; min-height:100%; }
   body{ font-family:'IBM Plex Sans', sans-serif; background:var(--ink); color:var(--parchment); padding:28px 16px 70px; }
   .wrap{ max-width:640px; margin:0 auto; }
-  #signin-row{ display:flex; justify-content:flex-end; margin-bottom:16px; }
-  #btn-signin{ font-family:'IBM Plex Mono', monospace; font-size:12px; background:none; border:1px solid var(--parchment-line); color:var(--parchment-dim); padding:6px 12px; border-radius:20px; cursor:pointer; }
-  #btn-signin.owner{ color:var(--hike); border-color:var(--hike); }
   header{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:4px; }
   h1{ font-family:'Fraunces', serif; font-style:italic; font-weight:600; font-size:28px; margin:0; }
   header a{ color:var(--parchment-dim); font-family:'IBM Plex Mono', monospace; font-size:12px; text-decoration:none; border-bottom:1px solid var(--parchment-line); white-space:nowrap; }
@@ -45,25 +41,25 @@
   #status.ok{ color:#8fbf8a; }
   #preview{ display:none; }
   .field-label{ font-family:'IBM Plex Mono', monospace; font-size:11px; letter-spacing:0.03em; text-transform:uppercase; color:var(--parchment-dim); margin:0 0 5px; }
+  #waiting-note{ display:none; font-family:'IBM Plex Mono', monospace; font-size:12px; color:var(--hike); margin-top:10px; }
 </style>
 </head>
 <body>
 <div class="wrap">
-  <div id="signin-row"><button id="btn-signin">Sign in with Google</button></div>
   <header>
     <h1>Paddle Import</h1>
     <a href="./index.html">← back to Cairn</a>
   </header>
-  <p class="sub">Pulls a route off PaddlePoints and drops it straight into your "Cairn GPX Routes" Drive folder — same folder Cairn already watches, so it shows up next time you hit "Check for new routes."</p>
+  <p class="sub">Pulls a route off PaddlePoints and turns it into a <code>.gpx</code> file you can download, then drag into your "Cairn GPX Routes" Drive folder yourself — same as you already do for manually-created routes.</p>
 
   <section>
     <h2>1. Capture a route</h2>
-    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it — this opens an import tab right away — then click PaddlePoints' own "View" button and the route gets sent over on its own.</p>
-    <p>If your browser blocks the tab from opening, allow popups for PaddlePoints and click the bookmarklet again.</p>
+    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it — that opens this page in another tab and starts watching — then click PaddlePoints' own "View" button and the route gets sent over on its own.</p>
     <p><a class="bookmarklet-btn" id="bookmarklet-link" href="#">⛺ Cairn: Grab Route</a></p>
     <p><button class="btn small" id="btn-show-bookmarklet-code">Dragging not working? Show the code to copy instead</button></p>
     <textarea id="bookmarklet-code" style="display:none;" readonly onclick="this.select()"></textarea>
     <p style="margin-top:10px;">This only watches requests already made by the page you're on — it doesn't add any new network calls of its own, and it stops working the moment you leave or refresh that page.</p>
+    <p id="waiting-note">Watching this tab for a route sent from PaddlePoints…</p>
   </section>
 
   <section>
@@ -76,12 +72,12 @@
   </section>
 
   <section id="preview">
-    <h2>Route ready to import</h2>
+    <h2>Route ready</h2>
     <div class="field-label">Route name</div>
     <input type="text" id="route-title">
     <p id="route-meta" style="margin-top:10px;"></p>
     <div class="row" style="margin-top:14px;">
-      <button class="btn primary" id="btn-save">Save to Cairn GPX Routes</button>
+      <button class="btn primary" id="btn-download">Download GPX</button>
     </div>
   </section>
 
@@ -89,145 +85,12 @@
 </div>
 
 <script>
-/* ---------- Drive auth + upload (same pattern as Cairn's own index.html,
-   reused deliberately so this stays a thin, independent tool rather than a
-   second copy of app logic that could drift out of sync). ---------- */
-const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
-const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive';
-const GPX_FOLDER_NAME = 'Cairn GPX Routes';
-let gpxFolderId = localStorage.getItem('cairn:gpxFolderId') || '';
-let driveTokenClient = null;
-let driveAccessToken = null;
-let driveTokenExpiresAt = 0;
-let isOwner = false;
 let parsedRoute = null; // { title, segments, pointCount }
 
 function setStatus(msg, kind){
   const el = document.getElementById('status');
   el.textContent = msg || '';
   el.className = kind || '';
-}
-
-function initDriveAuth(){
-  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
-  driveTokenClient = google.accounts.oauth2.initTokenClient({
-    client_id: DRIVE_CLIENT_ID,
-    scope: DRIVE_SCOPES,
-    callback: ()=>{},
-  });
-}
-
-// A fresh import tab has no session of its own, but it's the same Google Cloud
-// project and OAuth client as Cairn — if you've already granted this app access
-// once (from Cairn or a previous import), this quietly reuses that grant instead
-// of making you click "Sign in" every single time a new tab opens.
-function trySilentSignIn(){
-  return new Promise((resolve)=>{
-    if(!driveTokenClient){ resolve(false); return; }
-    driveTokenClient.callback = (resp)=>{
-      if(resp.error){ resolve(false); return; }
-      driveAccessToken = resp.access_token;
-      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
-      resolve(true);
-    };
-    try{ driveTokenClient.requestAccessToken({ prompt:'' }); }
-    catch(e){ resolve(false); }
-  });
-}
-
-async function attemptSilentSignIn(){
-  let tries = 0;
-  while(!driveTokenClient && tries < 25){ await new Promise(r=>setTimeout(r,200)); tries++; }
-  if(!driveTokenClient) return;
-  const success = await trySilentSignIn();
-  if(success){
-    isOwner = true;
-    applySignInUI();
-  }
-}
-
-function requestDriveToken(){
-  return new Promise((resolve, reject)=>{
-    if(driveAccessToken && Date.now() < driveTokenExpiresAt - 60000){ resolve(driveAccessToken); return; }
-    if(!driveTokenClient){ reject(new Error('Google sign-in not ready yet — try again in a moment.')); return; }
-    driveTokenClient.callback = (resp)=>{
-      if(resp.error){ reject(new Error(resp.error)); return; }
-      driveAccessToken = resp.access_token;
-      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
-      isOwner = true;
-      applySignInUI();
-      resolve(driveAccessToken);
-    };
-    driveTokenClient.requestAccessToken({ prompt: driveAccessToken ? '' : 'consent' });
-  });
-}
-
-function applySignInUI(){
-  const btn = document.getElementById('btn-signin');
-  btn.textContent = isOwner ? 'Signed in ✓' : 'Sign in with Google';
-  btn.classList.toggle('owner', isOwner);
-}
-
-document.getElementById('btn-signin').onclick = async ()=>{
-  try{ await requestDriveToken(); }
-  catch(e){ setStatus("Couldn't sign in — make sure you're using the Google account Cairn is set up with.", 'error'); }
-};
-
-async function driveFindFile(query){
-  const q = encodeURIComponent(query);
-  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
-    headers: { Authorization: 'Bearer ' + driveAccessToken }
-  });
-  if(!res.ok) throw new Error('search failed ' + res.status);
-  const data = await res.json();
-  return (data.files && data.files[0]) || null;
-}
-
-async function driveSetPublic(fileId){
-  try{
-    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
-      body: JSON.stringify({ role:'reader', type:'anyone' }),
-    });
-  }catch(e){}
-}
-
-async function driveCreateFile(blob, filename, parentId, mimeType){
-  const metadata = { name: filename };
-  if(parentId) metadata.parents = [parentId];
-  const boundary = '-------cairnBoundary' + Date.now();
-  const delimiter = `\r\n--${boundary}\r\n`;
-  const closeDelim = `\r\n--${boundary}--`;
-  const metaPart = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata);
-  const mediaPartHeader = delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
-  const bodyBlob = new Blob([metaPart, mediaPartHeader, blob, closeDelim]);
-  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
-    method:'POST',
-    headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
-    body: bodyBlob,
-  });
-  if(!res.ok) throw new Error('create failed ' + res.status);
-  const data = await res.json();
-  return data.id;
-}
-
-async function ensureGpxFolder(){
-  if(gpxFolderId) return gpxFolderId;
-  let folder = await driveFindFile(`name='${GPX_FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
-  if(!folder){
-    const res = await fetch('https://www.googleapis.com/drive/v3/files?fields=id', {
-      method:'POST',
-      headers:{ 'Authorization':'Bearer ' + driveAccessToken, 'Content-Type':'application/json' },
-      body: JSON.stringify({ name: GPX_FOLDER_NAME, mimeType:'application/vnd.google-apps.folder' }),
-    });
-    const data = await res.json();
-    folder = { id: data.id };
-    await driveSetPublic(folder.id);
-  }
-  gpxFolderId = folder.id;
-  localStorage.setItem('cairn:gpxFolderId', gpxFolderId);
-  return gpxFolderId;
 }
 
 /* ---------- Parsing a PaddlePoints admin-ajax.php response ----------
@@ -306,27 +169,20 @@ document.getElementById('btn-parse-manual').onclick = ()=>{
   }
 };
 
-document.getElementById('btn-save').onclick = async ()=>{
+document.getElementById('btn-download').onclick = ()=>{
   if(!parsedRoute) return;
-  const btn = document.getElementById('btn-save');
-  btn.disabled = true;
-  setStatus('Signing in…', '');
-  try{
-    await requestDriveToken();
-    setStatus('Finding your GPX Routes folder…', '');
-    const folderId = await ensureGpxFolder();
-    const title = document.getElementById('route-title').value.trim() || 'Imported route';
-    const gpxText = buildGpx(title, parsedRoute.segments);
-    const blob = new Blob([gpxText], { type:'application/gpx+xml' });
-    setStatus('Uploading…', '');
-    const fileId = await driveCreateFile(blob, sanitizeFilename(title) + '.gpx', folderId, 'application/gpx+xml');
-    await driveSetPublic(fileId);
-    setStatus(`Saved "${sanitizeFilename(title)}.gpx" to Cairn GPX Routes. Open Cairn and hit "Check for new routes" to bring it in.`, 'ok');
-  }catch(e){
-    setStatus("Couldn't save — check your connection and try again. (" + e.message + ")", 'error');
-  }finally{
-    btn.disabled = false;
-  }
+  const title = document.getElementById('route-title').value.trim() || 'Imported route';
+  const gpxText = buildGpx(title, parsedRoute.segments);
+  const blob = new Blob([gpxText], { type:'application/gpx+xml' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = sanitizeFilename(title) + '.gpx';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 2000);
+  setStatus(`Downloaded "${sanitizeFilename(title)}.gpx" — drag it into your "Cairn GPX Routes" Drive folder, then hit "Check for new routes" in Cairn.`, 'ok');
 };
 
 /* ---------- Receiving a route sent over from the bookmarklet ---------- */
@@ -347,16 +203,26 @@ window.addEventListener('message', (event)=>{
     setStatus(e.message, 'error');
   }
 });
+if(new URLSearchParams(location.search).get('src') === 'bookmarklet'){
+  document.getElementById('waiting-note').style.display = 'block';
+}
 
 /* ---------- Bookmarklet ----------
    Runs on paddlepoints.net itself when clicked, so there's no CORS wall —
    it watches requests the page already makes (both fetch and XHR, since
    WordPress sites often use jQuery's $.ajax under the hood) for the
    admin-ajax.php route call, then hands the raw response across via
-   postMessage with a short retry window to cover the new tab still loading. */
+   postMessage with a short retry window to cover the new tab still loading.
+   The import tab is opened exactly once, synchronously, at the moment the
+   bookmarklet itself is clicked — that's the one point in this whole flow
+   that's an unambiguous direct user gesture. Opening it later, inside the
+   async fetch/XHR response handler, is what silently gets blocked by most
+   browsers' popup blockers even though a human really did click "View" to
+   trigger it — that gesture chain is already broken by the time the network
+   response comes back. */
 (function setUpBookmarklet(){
   const TARGET_ORIGIN = location.origin;
-  const IMPORT_URL = location.origin + location.pathname;
+  const IMPORT_URL = location.origin + location.pathname + '?src=bookmarklet';
   const src = `(function(){
     if(window.__cairnPaddleHook){ alert('Cairn import is already watching this page \u2014 click "View" on a route now.'); return; }
     window.__cairnPaddleHook = true;
@@ -372,12 +238,6 @@ window.addEventListener('message', (event)=>{
       }
       b.textContent = msg;
     }
-    // Open the import tab right now, synchronously, while this click is still
-    // a "real" user gesture as far as the browser's popup blocker is concerned.
-    // Opening it later, inside the async fetch/XHR response handler below, is
-    // what silently gets blocked \u2014 that gesture chain is already broken by
-    // the time the network response comes back, even though a human really did
-    // click something to trigger it.
     var importWin = window.open(IMPORT_URL, 'cairnPaddleImport');
     if(!importWin){
       banner('Cairn: popup blocked \u2014 allow popups for this site, then click the bookmarklet again.');
@@ -403,7 +263,7 @@ window.addEventListener('message', (event)=>{
       window.addEventListener('message', function ack(e){
         if(e.origin === TARGET_ORIGIN && e.data && e.data.type === 'CAIRN_PADDLEPOINTS_ACK'){
           clearInterval(timer);
-          banner('Cairn: sent \u2014 switch to the import tab to save it.');
+          banner('Cairn: sent \u2014 switch to the import tab to download it.');
           window.removeEventListener('message', ack);
         }
       });
@@ -443,9 +303,6 @@ document.getElementById('btn-show-bookmarklet-code').onclick = ()=>{
   const ta = document.getElementById('bookmarklet-code');
   ta.style.display = ta.style.display === 'none' ? 'block' : 'none';
 };
-
-initDriveAuth();
-attemptSilentSignIn();
 </script>
 </body>
 </html>
