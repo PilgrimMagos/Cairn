@@ -58,7 +58,8 @@
 
   <section>
     <h2>1. Capture a route</h2>
-    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it, then click PaddlePoints' own "View" button — the route gets sent here on its own.</p>
+    <p>Drag this button to your bookmarks bar once. On any PaddlePoints route page, click it — this opens an import tab right away — then click PaddlePoints' own "View" button and the route gets sent over on its own.</p>
+    <p>If your browser blocks the tab from opening, allow popups for PaddlePoints and click the bookmarklet again.</p>
     <p><a class="bookmarklet-btn" id="bookmarklet-link" href="#">⛺ Cairn: Grab Route</a></p>
     <p><button class="btn small" id="btn-show-bookmarklet-code">Dragging not working? Show the code to copy instead</button></p>
     <textarea id="bookmarklet-code" style="display:none;" readonly onclick="this.select()"></textarea>
@@ -114,6 +115,35 @@ function initDriveAuth(){
     scope: DRIVE_SCOPES,
     callback: ()=>{},
   });
+}
+
+// A fresh import tab has no session of its own, but it's the same Google Cloud
+// project and OAuth client as Cairn — if you've already granted this app access
+// once (from Cairn or a previous import), this quietly reuses that grant instead
+// of making you click "Sign in" every single time a new tab opens.
+function trySilentSignIn(){
+  return new Promise((resolve)=>{
+    if(!driveTokenClient){ resolve(false); return; }
+    driveTokenClient.callback = (resp)=>{
+      if(resp.error){ resolve(false); return; }
+      driveAccessToken = resp.access_token;
+      driveTokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      resolve(true);
+    };
+    try{ driveTokenClient.requestAccessToken({ prompt:'' }); }
+    catch(e){ resolve(false); }
+  });
+}
+
+async function attemptSilentSignIn(){
+  let tries = 0;
+  while(!driveTokenClient && tries < 25){ await new Promise(r=>setTimeout(r,200)); tries++; }
+  if(!driveTokenClient) return;
+  const success = await trySilentSignIn();
+  if(success){
+    isOwner = true;
+    applySignInUI();
+  }
 }
 
 function requestDriveToken(){
@@ -342,18 +372,32 @@ window.addEventListener('message', (event)=>{
       }
       b.textContent = msg;
     }
-    banner('Cairn: watching \u2014 click "View" on a route now.');
+    // Open the import tab right now, synchronously, while this click is still
+    // a "real" user gesture as far as the browser's popup blocker is concerned.
+    // Opening it later, inside the async fetch/XHR response handler below, is
+    // what silently gets blocked \u2014 that gesture chain is already broken by
+    // the time the network response comes back, even though a human really did
+    // click something to trigger it.
+    var importWin = window.open(IMPORT_URL, 'cairnPaddleImport');
+    if(!importWin){
+      banner('Cairn: popup blocked \u2014 allow popups for this site, then click the bookmarklet again.');
+      window.__cairnPaddleHook = false;
+      return;
+    }
+    banner('Cairn: import tab ready \u2014 now click "View" on a route.');
     function handleCaptured(text){
       var data;
       try{ data = JSON.parse(text); }catch(e){ return false; }
       if(!data || !data.Polys || !data.Polys.length) return false;
-      banner('Cairn: route captured, opening import tab\u2026');
-      var win = window.open(IMPORT_URL, 'cairnPaddleImport');
-      if(!win){ banner('Cairn: popup blocked \u2014 allow popups for this site and click View again.'); return true; }
+      if(importWin.closed){
+        banner('Cairn: import tab was closed \u2014 click the bookmarklet again to reopen it.');
+        return true;
+      }
+      banner('Cairn: route captured, sending\u2026');
       var tries = 0;
       var timer = setInterval(function(){
         tries++;
-        try{ win.postMessage({ type:'CAIRN_PADDLEPOINTS_ROUTE', raw:text }, TARGET_ORIGIN); }catch(e){}
+        try{ importWin.postMessage({ type:'CAIRN_PADDLEPOINTS_ROUTE', raw:text }, TARGET_ORIGIN); }catch(e){}
         if(tries > 30) clearInterval(timer);
       }, 300);
       window.addEventListener('message', function ack(e){
@@ -401,6 +445,7 @@ document.getElementById('btn-show-bookmarklet-code').onclick = ()=>{
 };
 
 initDriveAuth();
+attemptSilentSignIn();
 </script>
 </body>
 </html>
