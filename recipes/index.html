@@ -5,31 +5,35 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Recipes — a shared cookbook</title>
 <link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#23312A">
+<meta name="theme-color" content="#2A1826">
 <link rel="apple-touch-icon" href="icon-192.png">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recipes">
 <link rel="icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,500;1,6..72,600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,500;1,600&family=Work+Sans:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
 <style>
   :root{
-    --bg:#23312A;
-    --bg-soft:#2A3B32;
-    --bg-elevated:#324B3F;
-    --card:#F0E6CE;
-    --card-edge:#C98A2B;
-    --ink:#1B2420;
-    --ink-soft:#5B6B5E;
-    --cream:#EDE6D3;
-    --cream-soft:#AEBCAF;
-    --mustard:#C98A2B;
-    --mustard-soft:#E0B15C;
-    --tomato:#B5482F;
-    --line:rgba(27,36,32,.14);
-    --line-on-dark:rgba(237,230,211,.16);
+    --bg:#2A1826;
+    --bg-soft:#33202F;
+    --bg-elevated:#3B2233;
+    --card:#3B2233;
+    --card-edge:#B8912E;
+    --ink:#F0E4D0;
+    --ink-soft:#B79AAE;
+    --cream:#F0E4D0;
+    --cream-soft:#B79AAE;
+    --mustard:#B8912E;
+    --mustard-soft:#D4AF4A;
+    --tomato:#7A2E3D;
+    --line:rgba(240,228,208,.14);
+    --line-on-dark:rgba(240,228,208,.16);
     --radius:14px;
-    --font-display:'Newsreader',serif;
-    --font-body:'Inter',sans-serif;
+    --font-display:'Cormorant Garamond',serif;
+    --font-body:'Work Sans',sans-serif;
     --font-mono:'Space Mono',monospace;
   }
   *{box-sizing:border-box;}
@@ -67,7 +71,15 @@
   .brand h1{
     font-family:var(--font-display); font-style:italic; font-weight:600;
     font-size:26px; margin:0; color:var(--cream);
+    display:inline-flex; align-items:center; gap:9px;
   }
+  .brand-glyph{width:19px; height:19px; flex:none; color:var(--mustard);}
+  .gallery-rule{
+    display:flex; align-items:center; gap:10px; margin:8px auto 22px; color:var(--mustard);
+    max-width:980px; padding:0 20px;
+  }
+  .gallery-rule svg{width:15px; height:15px; flex:none;}
+  .gallery-rule .line{flex:1; height:1px; background:linear-gradient(90deg, var(--mustard), transparent);}
   .header-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
   .btn{
     font-family:var(--font-body); font-size:14px; font-weight:600;
@@ -77,10 +89,10 @@
   }
   .btn:hover{background:rgba(237,230,211,.08);}
   .btn:active{transform:scale(.97);}
-  .btn.primary{background:var(--mustard); border-color:var(--mustard); color:var(--ink);}
+  .btn.primary{background:var(--mustard); border-color:var(--mustard); color:var(--bg);}
   .btn.primary:hover{background:var(--mustard-soft);}
   .btn.danger{background:transparent; border-color:var(--tomato); color:#E8A390;}
-  .btn.danger:hover{background:rgba(181,72,47,.15);}
+  .btn.danger:hover{background:rgba(122,46,61,.18);}
   .btn.small{padding:6px 12px; font-size:13px;}
   .btn[disabled]{opacity:.5; cursor:default; pointer-events:none;}
   .btn.owner{border-color:var(--mustard); color:var(--mustard-soft);}
@@ -103,59 +115,53 @@
     background:transparent; border:none; color:var(--cream-soft); font-size:13px; font-weight:600;
     padding:7px 13px; cursor:pointer; font-family:var(--font-body);
   }
-  .segmented button.active{background:var(--mustard); color:var(--ink);}
+  .segmented button.active{background:var(--mustard); color:var(--bg);}
   .tag-chips{display:flex; gap:6px; flex-wrap:wrap;}
   .tag-chip{
     font-family:var(--font-mono); font-size:12px; padding:5px 11px; border-radius:999px;
     border:1px solid var(--line-on-dark); background:transparent; color:var(--cream-soft); cursor:pointer;
   }
-  .tag-chip.active{background:var(--mustard-soft); border-color:var(--mustard-soft); color:var(--ink);}
+  .tag-chip.active{background:var(--mustard-soft); border-color:var(--mustard-soft); color:var(--bg);}
 
-  /* ---------- List (recipe box) ---------- */
-  .list-wrap{max-width:760px; margin:0 auto; padding:18px 20px 80px; position:relative;}
-  .list-wrap::before{
-    content:""; position:absolute; left:26px; top:8px; bottom:40px; width:0;
-    border-left:2px dashed var(--line-on-dark);
+  /* ---------- List (gallery grid) ---------- */
+  .list-wrap{max-width:980px; margin:0 auto; padding:18px 20px 80px;}
+  .recipe-list{
+    display:grid; grid-template-columns:repeat(auto-fill, minmax(150px,1fr)); gap:26px 20px;
   }
-  .recipe-list{display:flex; flex-direction:column; gap:14px; padding-left:26px;}
   .recipe-card{
-    position:relative;
-    background:var(--card); color:var(--ink); border-radius:var(--radius);
-    padding:14px 16px 14px 20px; display:flex; gap:14px; align-items:center;
-    box-shadow:0 2px 0 var(--card-edge);
-    cursor:pointer; transition:transform .12s ease;
+    cursor:pointer; background:none; border:none; padding:0; text-align:center;
   }
-  .recipe-card:hover{transform:translateY(-2px) rotate(-.2deg);}
-  .recipe-card:focus-visible{outline:3px solid var(--mustard-soft); outline-offset:2px;}
-  .recipe-card::before{
-    content:""; position:absolute; left:-32px; top:50%; transform:translateY(-50%);
-    width:12px; height:12px; border-radius:50%; background:var(--bg);
-    border:2px solid var(--mustard-soft);
+  .recipe-card:focus-visible .frame{outline:3px solid var(--mustard-soft); outline-offset:2px;}
+  .frame{
+    position:relative; border-radius:2px; overflow:hidden; aspect-ratio:3/4;
+    border:1px solid var(--mustard); padding:5px; background:var(--bg-elevated);
+    transition:transform .12s ease;
   }
-  .thumb{
-    width:60px; height:60px; border-radius:10px; flex:none; object-fit:cover;
-    background:var(--mustard-soft);
-  }
+  .recipe-card:hover .frame{transform:translateY(-3px);}
+  .thumb{ width:100%; height:100%; object-fit:cover; border-radius:1px; display:block; }
   .thumb-placeholder{
-    width:60px; height:60px; border-radius:10px; flex:none;
-    background:var(--mustard-soft); display:flex; align-items:center; justify-content:center;
-    font-size:22px;
+    width:100%; height:100%; border-radius:1px; background:var(--bg-elevated);
+    display:flex; align-items:center; justify-content:center;
   }
-  .card-body{flex:1; min-width:0;}
+  .thumb-placeholder svg{width:26px; height:26px; opacity:.6;}
+  .status-corner{
+    position:absolute; top:10px; right:10px; width:8px; height:8px; border-radius:50%;
+    border:1.4px solid var(--mustard-soft); background:var(--bg);
+  }
+  .status-corner.made{background:var(--tomato); border-color:var(--tomato);}
+  .card-caption{margin-top:10px;}
   .card-title{
-    font-family:var(--font-display); font-weight:600; font-size:19px; margin:0 0 4px;
-    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font-family:var(--font-display); font-style:italic; font-weight:600; font-size:16px;
+    margin:0 0 3px; color:var(--cream); line-height:1.25;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
   }
   .card-meta{
-    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
-    font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);
+    font-family:var(--font-mono); font-size:9.5px; letter-spacing:.05em; text-transform:uppercase;
+    color:var(--cream-soft); display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
   }
-  .status-dot{width:9px; height:9px; border-radius:50%; display:inline-block; border:1.5px solid var(--tomato);}
-  .status-dot.made{background:var(--tomato);}
-  .card-tags{display:flex; gap:5px; flex-wrap:wrap; margin-top:5px;}
   .pill{
     font-family:var(--font-mono); font-size:10.5px; padding:2px 8px; border-radius:999px;
-    background:rgba(27,36,32,.08); color:var(--ink-soft);
+    background:rgba(240,228,208,.12); color:var(--cream-soft);
   }
   .empty-state{
     padding:40px 20px; text-align:center; color:var(--cream-soft); font-size:15px; line-height:1.5;
@@ -213,13 +219,27 @@
   .detail-section{margin-bottom:22px;}
   .detail-section h3{
     font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:.06em;
-    color:var(--mustard-soft); margin:0 0 8px;
+    color:var(--mustard-soft); margin:0;
   }
+  .section-label{display:flex; align-items:center; gap:8px; margin:0 0 10px;}
+  .section-label svg{width:13px; height:13px; flex:none; color:var(--mustard);}
+  .section-label .line{flex:1; height:1px; background:var(--line-on-dark);}
+  .panel-subheader{
+    font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--mustard-soft); margin:26px 0 10px; padding-top:16px; border-top:1px solid var(--line-on-dark);
+  }
+  .shopping-recipe-row{display:flex; align-items:center; gap:10px; padding:8px 0; border-bottom:1px solid var(--line-on-dark);}
+  .shopping-recipe-row label{flex:1; font-size:14px; cursor:pointer;}
+  .shopping-list-row{display:flex; align-items:center; gap:10px; padding:9px 0; border-bottom:1px solid var(--line-on-dark);}
+  .shopping-list-row label{flex:1; font-size:14.5px; cursor:pointer;}
+  .shopping-list-row.checked label{color:var(--cream-soft); text-decoration:line-through;}
+  .shopping-list-cost{font-family:var(--font-mono); font-size:12px; color:var(--cream-soft); white-space:nowrap;}
   .detail-section ul, .detail-section ol{margin:0; padding-left:20px; line-height:1.7;}
   .detail-section p{line-height:1.6; margin:0; white-space:pre-wrap;}
   .photo-strip{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px;}
   .photo-strip img, .photo-strip .photo-slot{
-    width:120px; height:120px; border-radius:10px; object-fit:cover; flex:none; background:var(--bg-soft);
+    width:120px; height:120px; border-radius:2px; object-fit:cover; flex:none; background:var(--bg-soft);
+    border:1px solid var(--mustard);
   }
   .photo-strip a{display:block;}
   .photo-edit-grid{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
@@ -239,8 +259,8 @@
   }
   .toast{
     position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
-    background:var(--card); color:var(--ink); padding:10px 18px; border-radius:999px;
-    font-size:13px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.3); z-index:100;
+    background:var(--mustard-soft); color:var(--bg); padding:10px 18px; border-radius:999px;
+    font-size:13px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.4); z-index:100;
     opacity:0; pointer-events:none; transition:opacity .2s;
   }
   .toast.show{opacity:1;}
@@ -249,7 +269,7 @@
   .badge{
     font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:999px; display:inline-block;
   }
-  .badge.unmatched{background:rgba(181,72,47,.18); color:#E8A390;}
+  .badge.unmatched{background:rgba(122,46,61,.22); color:#E8A390;}
   .badge.auto{background:rgba(201,138,43,.22); color:var(--mustard-soft);}
   .badge.confirmed{background:rgba(107,143,94,.25); color:#9FC28C;}
   .paste-row{display:flex; gap:8px; align-items:flex-start; margin-bottom:12px;}
@@ -302,13 +322,20 @@
 <header>
   <div class="brand">
     <span class="eyebrow">A shared cookbook</span>
-    <h1>Recipes</h1>
+    <h1>
+      <svg class="brand-glyph" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4">
+        <path d="M7 2v8a2 2 0 0 0 2 2v10M7 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2M9 2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/>
+        <path d="M17 2c-1.5 0-3 1.8-3 5s1 5 1 5v10"/>
+      </svg>
+      Recipes
+    </h1>
   </div>
   <div class="header-actions">
     <button class="btn editor-only" id="btn-add" style="display:none;">+ New recipe</button>
     <button class="btn small editor-only" id="btn-import" style="display:none;">Import</button>
     <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
     <button class="btn small editor-only" id="btn-pantry" style="display:none;">Pantry</button>
+    <button class="btn small editor-only" id="btn-shopping" style="display:none;">Shopping list</button>
     <button class="btn small" id="btn-refresh-app" title="Clear cache and reload the latest version">Refresh app</button>
     <button class="btn" id="btn-signin">Sign in</button>
     <button class="btn small editor-only" id="btn-signout" style="display:none;">Sign out</button>
@@ -327,9 +354,19 @@
     </div>
     <div class="tag-chips" id="tag-chips"></div>
   </div>
+  <div class="filter-row">
+    <div class="tag-chips" id="carb-chips"></div>
+    <div class="tag-chips" id="protein-chips"></div>
+    <button class="btn small" id="btn-randomizer" style="margin-left:auto;">🎲 Surprise me</button>
+  </div>
 </div>
 
 <div class="status-line" id="status-line"></div>
+
+<div class="gallery-rule">
+  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 2v8a2 2 0 0 0 2 2v10M7 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2M9 2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/><path d="M17 2c-1.5 0-3 1.8-3 5s1 5 1 5v10"/></svg>
+  <div class="line"></div>
+</div>
 
 <div class="list-wrap">
   <div class="recipe-list" id="recipe-list"></div>
@@ -346,10 +383,16 @@
     </div>
     <div class="panel-body" id="panel-body"></div>
     <div class="panel-footer" id="panel-footer" style="display:none;">
-      <button class="btn danger editor-only" id="btn-delete">Delete</button>
-      <div style="flex:1; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
-        <span class="save-hint" id="save-hint"></span>
-        <button class="btn primary editor-only" id="btn-save">Save</button>
+      <div id="footer-view-mode" style="display:none; flex:1; text-align:right;">
+        <button class="btn primary" id="btn-edit-recipe">Edit</button>
+      </div>
+      <div id="footer-edit-mode" style="display:none; flex:1; align-items:center; justify-content:space-between; gap:10px;">
+        <button class="btn danger editor-only" id="btn-delete">Delete</button>
+        <div style="flex:1; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+          <button class="btn" id="btn-cancel-edit">Cancel</button>
+          <span class="save-hint" id="save-hint"></span>
+          <button class="btn primary editor-only" id="btn-save">Save</button>
+        </div>
       </div>
     </div>
   </div>
@@ -384,6 +427,29 @@
   </div>
 </div>
 
+<div class="overlay" id="shopping-overlay">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="eyebrow">Shopping list</div>
+      </div>
+      <button class="icon-btn" id="btn-shopping-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="panel-body" id="shopping-body">
+      <p class="field-hint" style="margin-bottom:12px;">
+        Pick recipes to combine into one list. The same ingredient across recipes merges into a single line
+        instead of listing twice.
+      </p>
+      <div id="shopping-recipe-picker"></div>
+      <div class="panel-subheader" id="shopping-list-header" style="display:none;">List</div>
+      <div id="shopping-list-output"></div>
+    </div>
+    <div class="panel-footer" id="shopping-footer" style="display:none; justify-content:flex-end;">
+      <span class="save-hint" id="shopping-total"></span>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -410,10 +476,13 @@ let accessToken = null;
 let tokenExpiresAt = 0;
 let statusFilter = 'all';
 let activeTag = null;
+let activeCarb = null;
+let activeProtein = null;
 let searchQuery = '';
 let currentDetail = null;  // full object of the recipe open in the panel
 let currentPhotosUploading = 0;
 let isNewRecipe = false;
+let editSnapshot = null; // deep-clone of currentDetail taken when entering edit mode, restored on Cancel
 let pantry = [];           // shared pantry items: {id, name, aliases[], unit, costPerUnit, kcalPerUnit, density}
 
 /* ==================== Small helpers ==================== */
@@ -468,14 +537,25 @@ function parseQuantityString(str){
   return isNaN(num) ? null : num;
 }
 
-// Basic cleanup only — bullet/number-stripping gets smarter once the
-// dedicated paste-cleanup pass is built; this just strips obvious bullets.
-function stripBullet(line){
-  return line.replace(/^[\s]*[-*•▢□]\s*/, '').trim();
+// Strips both bullet characters and numbered-list prefixes ("1.", "2)", "(3)")
+// from a pasted line. The numbered-list pattern requires the period/paren to
+// be followed immediately by whitespace, which real quantities never do —
+// "2.5 cups" has a digit right after the dot, "2 tbsp" has a space right
+// after the bare number — so this can't misfire on an actual quantity.
+function cleanPastedLine(line){
+  let s = line;
+  for(let i=0; i<3; i++){
+    const before = s;
+    s = s.replace(/^[\s]*[-*•▢□○·]\s*/, '');
+    s = s.replace(/^\(?\d+[\.\)]\s+/, '');
+    s = s.trim();
+    if(s === before) break;
+  }
+  return s;
 }
 
 function parseIngredientLine(rawLine){
-  const cleaned = stripBullet(rawLine);
+  const cleaned = cleanPastedLine(rawLine);
   const qtyMatch = cleaned.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.\d+|\d+)\s*/);
   let rest = cleaned;
   let quantity = '';
@@ -619,15 +699,21 @@ async function handleImportFile(file){
     title: String(raw.title).trim(),
     tags: Array.isArray(raw.tags) ? raw.tags : [],
     status: raw.status === 'made' ? 'made' : 'want',
+    mainCarb: MAIN_CARB_OPTIONS.includes(raw.mainCarb) ? raw.mainCarb : 'None',
+    mainProtein: MAIN_PROTEIN_OPTIONS.includes(raw.mainProtein) ? raw.mainProtein : 'None',
     servings: raw.servings ? String(raw.servings) : '',
     ingredients: Array.isArray(raw.ingredients) ? raw.ingredients.map(ing=>{
       if(typeof ing === 'string') return ing; // normalizeIngredients() below will convert it
-      return {
+      const row = {
         id: genId(), rawText: ing.rawText || '', quantity: ing.quantity || '', unit: ing.unit || null,
-        name: ing.name || '', pantryId: null, status: 'unmatched', matchScore: 0, cost: null, kcal: null,
+        name: ing.name || '', pantryId: null, status: 'unmatched', matchScore: 0, cost: null, kcal: null, protein: null,
       };
+      if(ing.suggestedPantryEntry && typeof ing.suggestedPantryEntry === 'object'){
+        row.suggestedPantryEntry = ing.suggestedPantryEntry; // used to pre-fill the "add to pantry" form if unmatched
+      }
+      return row;
     }) : [],
-    instructions: Array.isArray(raw.instructions) ? raw.instructions.map(String) : [],
+    instructions: Array.isArray(raw.instructions) ? raw.instructions.map(String).map(cleanPastedLine) : [],
     notes: raw.notes || '',
     sources: Array.isArray(raw.sources) ? raw.sources.map(String) : [],
     addedBy: editorName || '',
@@ -717,6 +803,7 @@ function applyEditorUI(){
   document.getElementById('btn-add').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-import').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-pantry').style.display = isEditor ? 'inline-flex' : 'none';
+  document.getElementById('btn-shopping').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-signout').style.display = isEditor ? 'inline-flex' : 'none';
 }
 
@@ -935,6 +1022,8 @@ function slimForSummary(d){
     title: d.title,
     tags: d.tags,
     status: d.status,
+    mainCarb: d.mainCarb || 'None',
+    mainProtein: d.mainProtein || 'None',
     servings: d.servings,
     addedBy: d.addedBy,
     thumbFileId: (d.photos && d.photos[0]) ? d.photos[0].fileId : null,
@@ -1042,10 +1131,24 @@ function renderTagChips(){
   });
 }
 
+// Unlike tag chips (built from whatever tags are actually in use), carb/protein
+// options are a fixed set — always shown in full regardless of what's saved yet.
+function renderFixedChips(wrapId, options, activeVal, onPick){
+  const wrap = document.getElementById(wrapId);
+  wrap.innerHTML = options.map(o =>
+    `<button class="tag-chip${activeVal===o?' active':''}" data-val="${escapeHtml(o)}">${escapeHtml(o)}</button>`
+  ).join('');
+  wrap.querySelectorAll('.tag-chip').forEach(btn=>{
+    btn.onclick = ()=>{ onPick(activeVal === btn.dataset.val ? null : btn.dataset.val); renderList(); };
+  });
+}
+
 function filteredRecipes(){
   return recipes.filter(r=>{
     if(statusFilter !== 'all' && r.status !== statusFilter) return false;
     if(activeTag && !(r.tags||[]).includes(activeTag)) return false;
+    if(activeCarb && (r.mainCarb||'None') !== activeCarb) return false;
+    if(activeProtein && (r.mainProtein||'None') !== activeProtein) return false;
     if(searchQuery){
       const hay = (r.title + ' ' + (r.tags||[]).join(' ')).toLowerCase();
       if(!hay.includes(searchQuery.toLowerCase())) return false;
@@ -1056,6 +1159,8 @@ function filteredRecipes(){
 
 function renderList(){
   renderTagChips();
+  renderFixedChips('carb-chips', MAIN_CARB_OPTIONS, activeCarb, v=>{ activeCarb = v; });
+  renderFixedChips('protein-chips', MAIN_PROTEIN_OPTIONS, activeProtein, v=>{ activeProtein = v; });
   const listEl = document.getElementById('recipe-list');
   const emptyEl = document.getElementById('empty-state');
   const items = filteredRecipes();
@@ -1076,20 +1181,27 @@ function renderList(){
   }
   emptyEl.style.display = 'none';
 
-  listEl.innerHTML = items.map(r => `
-    <div class="recipe-card" tabindex="0" role="button" data-id="${escapeHtml(r.id)}">
-      ${r.thumbFileId
-        ? `<img class="thumb" data-src="${publicFileUrl(r.thumbFileId)}" alt="">`
-        : `<div class="thumb-placeholder">🍽️</div>`}
-      <div class="card-body">
-        <p class="card-title">${escapeHtml(r.title || 'Untitled recipe')}</p>
-        <div class="card-meta">
-          <span><span class="status-dot${r.status==='made'?' made':''}"></span> ${r.status==='made'?'Made it':'Want to try'}</span>
+  const UTENSIL_GLYPH = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4"><path d="M7 2v8a2 2 0 0 0 2 2v10M7 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2M9 2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/><path d="M17 2c-1.5 0-3 1.8-3 5s1 5 1 5v10"/></svg>`;
+
+  listEl.innerHTML = items.map(r => {
+    const metaBits = [r.status==='made' ? 'Made it' : 'Want to try'];
+    if(r.mainCarb && r.mainCarb!=='None') metaBits.push(r.mainCarb);
+    else if(r.tags && r.tags[0]) metaBits.push(r.tags[0]);
+    return `
+      <div class="recipe-card" tabindex="0" role="button" data-id="${escapeHtml(r.id)}">
+        <div class="frame">
+          ${r.thumbFileId
+            ? `<img class="thumb" data-src="${publicFileUrl(r.thumbFileId)}" alt="">`
+            : `<div class="thumb-placeholder">${UTENSIL_GLYPH}</div>`}
+          <span class="status-corner${r.status==='made'?' made':''}"></span>
         </div>
-        ${(r.tags && r.tags.length) ? `<div class="card-tags">${r.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+        <div class="card-caption">
+          <p class="card-title">${escapeHtml(r.title || 'Untitled recipe')}</p>
+          <span class="card-meta">${escapeHtml(metaBits.join(' · '))}</span>
+        </div>
       </div>
-    </div>
-  `).join('');
+    `;
+  }).join('');
 
   listEl.querySelectorAll('.recipe-card').forEach(card=>{
     card.onclick = ()=> openDetail(card.dataset.id);
@@ -1119,8 +1231,11 @@ function closePanel(){
   document.getElementById('overlay').classList.remove('open');
   currentDetail = null;
   isNewRecipe = false;
+  editSnapshot = null;
 }
 document.getElementById('btn-close').onclick = closePanel;
+document.getElementById('btn-edit-recipe').onclick = ()=> enterEditMode();
+document.getElementById('btn-cancel-edit').onclick = ()=> cancelEdit();
 document.getElementById('overlay').addEventListener('click', (e)=>{
   if(e.target.id === 'overlay') closePanel();
 });
@@ -1136,19 +1251,47 @@ async function openDetail(id){
     if(isEditor) await loadPantry(); // fresh pantry for matching/cost preview while editing
     const detail = await loadDetail(summary.detailFileId);
     normalizeIngredients(detail);
+    if(!MAIN_CARB_OPTIONS.includes(detail.mainCarb)) detail.mainCarb = 'None';
+    if(!MAIN_PROTEIN_OPTIONS.includes(detail.mainProtein)) detail.mainProtein = 'None';
     currentDetail = detail;
     isNewRecipe = false;
+    editSnapshot = null;
     document.getElementById('panel-eyebrow').textContent = detail.status === 'made' ? 'Made it' : 'Want to try';
-    if(isEditor) renderEditForm(detail); else renderReadOnly(detail);
+    renderReadOnly(detail); // always open in view mode — editors get an Edit button, everyone else just sees this
   }catch(e){
     document.getElementById('panel-body').innerHTML = `<p>Couldn't load this recipe right now.</p>`;
   }
+}
+
+const MAIN_CARB_OPTIONS = ['Pasta','Rice','Potato','Bread','Noodles','Grain','None'];
+const MAIN_PROTEIN_OPTIONS = ['Chicken','Beef','Pork','Fish/Seafood','Tofu/Plant-based','Egg','None'];
+
+function enterEditMode(){
+  if(!isNewRecipe){
+    editSnapshot = JSON.parse(JSON.stringify(currentDetail)); // snapshot so Cancel can truly revert
+  }
+  document.getElementById('panel-eyebrow').textContent = isNewRecipe ? 'New recipe' : 'Editing';
+  renderEditForm(currentDetail);
+}
+
+function cancelEdit(){
+  if(isNewRecipe){
+    closePanel();
+    return;
+  }
+  if(editSnapshot){
+    currentDetail = editSnapshot;
+    editSnapshot = null;
+  }
+  document.getElementById('panel-eyebrow').textContent = currentDetail.status === 'made' ? 'Made it' : 'Want to try';
+  renderReadOnly(currentDetail);
 }
 
 async function openNewRecipe(){
   await loadPantry();
   currentDetail = {
     id: genId(), detailFileId: null, title: '', tags: [], status: 'want',
+    mainCarb: 'None', mainProtein: 'None',
     servings: '', ingredients: [], instructions: [],
     notes: '', sources: [], addedBy: editorName || '', photos: [],
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
@@ -1163,6 +1306,17 @@ document.getElementById('btn-add').onclick = openNewRecipe;
 function formatIngredientLine(row){
   const parts = [row.quantity, unitLabel(row.unit), row.name].filter(Boolean);
   return parts.join(' ').replace(/\s+/g,' ').trim();
+}
+
+function formatIngredientLineWithCost(row){
+  let line = formatIngredientLine(row);
+  if(row.cost != null){
+    const bits = [`$${row.cost.toFixed(2)}`];
+    if(row.kcal != null) bits.push(Math.round(row.kcal) + ' kcal');
+    if(row.protein != null) bits.push(Math.round(row.protein) + 'g protein');
+    line += ` — ${bits.join(' · ')}`;
+  }
+  return line;
 }
 
 function ingredientTotals(ingredients){
@@ -1183,26 +1337,42 @@ function totalsLineText(totals){
   return `${parts.join(' · ')} (${totals.priced} of ${totals.total} priced)`;
 }
 
+function sectionLabel(text){
+  return `<div class="section-label"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 2v8a2 2 0 0 0 2 2v10M7 2a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2M9 2a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2"/><path d="M17 2c-1.5 0-3 1.8-3 5s1 5 1 5v10"/></svg><h3>${escapeHtml(text)}</h3><div class="line"></div></div>`;
+}
+
 function renderReadOnly(d){
   const body = document.getElementById('panel-body');
   const photos = d.photos || [];
   const totals = ingredientTotals(d.ingredients);
+  const perServing = perServingText(d);
   body.innerHTML = `
     ${photos.length ? `<div class="photo-strip">${photos.map(p=>`<a href="${publicFileUrl(p.fileId)}" target="_blank" rel="noopener"><img src="${publicFileUrl(p.fileId)}" alt=""></a>`).join('')}</div>` : ''}
     <h2 class="detail-title">${escapeHtml(d.title)}</h2>
     <div class="detail-meta">
-      ${d.servings ? `<span>Serves ${escapeHtml(d.servings)}</span>`:''}
+      ${d.servings ? `<span>Serves ${escapeHtml(d.servings)}${perServing ? ' · ' + escapeHtml(perServing) : ''}</span>`:''}
+      ${(d.mainCarb && d.mainCarb!=='None') ? `<span>${escapeHtml(d.mainCarb)}</span>`:''}
+      ${(d.mainProtein && d.mainProtein!=='None') ? `<span>${escapeHtml(d.mainProtein)}</span>`:''}
       ${d.addedBy ? `<span>Added by ${escapeHtml(d.addedBy)}</span>`:''}
     </div>
     ${(d.tags && d.tags.length) ? `<div class="detail-tags">${d.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}
-    ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section"><h3>Ingredients</h3><ul>${d.ingredients.map(row=>`<li>${escapeHtml(formatIngredientLine(row))}</li>`).join('')}</ul>
+    ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section">${sectionLabel('Ingredients')}<ul>${d.ingredients.map(row=>`<li>${escapeHtml(formatIngredientLineWithCost(row))}</li>`).join('')}</ul>
       ${totals.priced > 0 ? `<div class="totals-line">${totalsLineText(totals)}</div>` : ''}
     </div>`:''}
-    ${(d.instructions && d.instructions.length) ? `<div class="detail-section"><h3>Instructions</h3><ol>${d.instructions.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ol></div>`:''}
-    ${d.notes ? `<div class="detail-section"><h3>Notes</h3><p>${escapeHtml(d.notes)}</p></div>`:''}
-    ${(d.sources && d.sources.length) ? `<div class="detail-section"><h3>Source</h3><p>${d.sources.map(s=>looksLikeUrl(s)?`<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(s)}</a>`:escapeHtml(s)).join('<br>')}</p></div>`:''}
+    ${(d.instructions && d.instructions.length) ? `<div class="detail-section">${sectionLabel('Instructions')}<ol>${d.instructions.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ol></div>`:''}
+    ${d.notes ? `<div class="detail-section">${sectionLabel('Notes')}<p>${escapeHtml(d.notes)}</p></div>`:''}
+    ${(d.sources && d.sources.length) ? `<div class="detail-section">${sectionLabel('Source')}<p>${d.sources.map(s=>looksLikeUrl(s)?`<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(s)}</a>`:escapeHtml(s)).join('<br>')}</p></div>`:''}
   `;
-  document.getElementById('panel-footer').style.display = 'none';
+  const footer = document.getElementById('panel-footer');
+  const viewFooter = document.getElementById('footer-view-mode');
+  const editFooter = document.getElementById('footer-edit-mode');
+  if(isEditor){
+    footer.style.display = 'flex';
+    viewFooter.style.display = 'block';
+    editFooter.style.display = 'none';
+  } else {
+    footer.style.display = 'none';
+  }
 }
 
 function renderEditForm(d){
@@ -1230,9 +1400,22 @@ function renderEditForm(d){
         <option value="made" ${d.status==='made'?'selected':''}>Made it</option>
       </select>
     </div>
+    <div class="field row3" style="grid-template-columns:1fr 1fr;">
+      <div>
+        <label>Main carb</label>
+        <select id="f-main-carb">${MAIN_CARB_OPTIONS.map(o=>`<option value="${o}" ${d.mainCarb===o?'selected':''}>${o}</option>`).join('')}</select>
+      </div>
+      <div>
+        <label>Main protein</label>
+        <select id="f-main-protein">${MAIN_PROTEIN_OPTIONS.map(o=>`<option value="${o}" ${d.mainProtein===o?'selected':''}>${o}</option>`).join('')}</select>
+      </div>
+    </div>
     <div class="field">
       <label>Servings</label>
-      <input type="text" id="f-servings" value="${escapeHtml(d.servings)}" style="max-width:160px;">
+      <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+        <input type="text" id="f-servings" value="${escapeHtml(d.servings)}" style="max-width:120px;">
+        <span class="totals-line" id="per-serving-line" style="margin:0;"></span>
+      </div>
     </div>
     <div class="field">
       <label>Ingredients</label>
@@ -1267,14 +1450,16 @@ function renderEditForm(d){
   };
 
   renderIngredientRows(d);
+  document.getElementById('f-servings').oninput = ()=> updatePerServingDisplay(d);
+  updatePerServingDisplay(d);
   document.getElementById('btn-parse-ingredients').onclick = ()=>{
     const box = document.getElementById('f-ingredients-paste');
-    const lines = linesToArray(box.value);
+    const lines = linesToArray(box.value).map(cleanPastedLine);
     lines.forEach(line=>{
       const parsed = parseIngredientLine(line);
       const m = matchIngredientToPantry(parsed.name, pantry);
       const row = { id:genId(), rawText:line, quantity:parsed.quantity, unit:parsed.unit, name:parsed.name,
-        pantryId:m.pantryId, status: m.pantryId ? 'auto' : 'unmatched', matchScore:m.score, cost:null, kcal:null };
+        pantryId:m.pantryId, status: m.pantryId ? 'auto' : 'unmatched', matchScore:m.score, cost:null, kcal:null, protein:null };
       recomputeIngredientRow(row);
       d.ingredients.push(row);
     });
@@ -1282,12 +1467,15 @@ function renderEditForm(d){
     renderIngredientRows(d);
   };
   document.getElementById('btn-add-ingredient-row').onclick = ()=>{
-    d.ingredients.push({ id:genId(), rawText:'', quantity:'', unit:null, name:'', pantryId:null, status:'unmatched', matchScore:0, cost:null, kcal:null });
+    d.ingredients.push({ id:genId(), rawText:'', quantity:'', unit:null, name:'', pantryId:null, status:'unmatched', matchScore:0, cost:null, kcal:null, protein:null });
     renderIngredientRows(d);
   };
 
   document.getElementById('panel-footer').style.display = 'flex';
+  document.getElementById('footer-view-mode').style.display = 'none';
+  document.getElementById('footer-edit-mode').style.display = 'flex';
   document.getElementById('btn-delete').style.display = isNewRecipe ? 'none' : 'inline-flex';
+  document.getElementById('btn-cancel-edit').textContent = isNewRecipe ? 'Discard' : 'Cancel';
   updateSaveAvailability();
 }
 
@@ -1385,22 +1573,48 @@ function updateIngredientTotals(d){
   if(!el) return;
   const t = ingredientTotals(d.ingredients);
   el.textContent = totalsLineText(t);
+  updatePerServingDisplay(d);
+}
+
+function perServingText(d){
+  const servings = parseFloat(d.servings);
+  if(!servings || servings <= 0) return '';
+  const t = ingredientTotals(d.ingredients);
+  if(!t.priced) return '';
+  const parts = [`~$${(t.cost/servings).toFixed(2)}/serving`];
+  if(t.kcal) parts.push(Math.round(t.kcal/servings) + ' kcal');
+  if(t.protein) parts.push(Math.round(t.protein/servings) + 'g protein');
+  return parts.join(' · ');
+}
+
+function updatePerServingDisplay(d){
+  const el = document.getElementById('per-serving-line');
+  if(!el) return;
+  const servingsInput = document.getElementById('f-servings');
+  if(servingsInput) d.servings = servingsInput.value.trim();
+  el.textContent = perServingText(d);
 }
 
 function openMiniPantryForm(rowEl, row, d){
   const slot = rowEl.querySelector('.mini-pantry-form-slot');
   if(slot.innerHTML){ slot.innerHTML = ''; return; } // toggle closed if already open
+  const sug = row.suggestedPantryEntry || null;
+  const prefillName = sug && sug.name ? sug.name : row.name;
+  const prefillUnit = sug && ['g','ml','each'].includes(sug.unit) ? sug.unit : 'g';
+  const prefillKcal = sug && sug.kcalPerUnit != null ? sug.kcalPerUnit : '';
+  const prefillProtein = sug && sug.proteinPerUnit != null ? sug.proteinPerUnit : '';
   slot.innerHTML = `
+    ${sug ? `<div class="field-hint" style="margin-bottom:6px;">Pre-filled from the import — check it over before saving.</div>` : ''}
     <div class="mini-pantry-form">
-      <input type="text" class="mp-name" placeholder="Pantry name" value="${escapeHtml(row.name)}">
+      <input type="text" class="mp-name" placeholder="Pantry name" value="${escapeHtml(prefillName)}">
       <select class="mp-unit">
-        <option value="g">priced per g</option>
-        <option value="ml">priced per ml</option>
-        <option value="each">priced per each</option>
+        <option value="g" ${prefillUnit==='g'?'selected':''}>priced per g</option>
+        <option value="ml" ${prefillUnit==='ml'?'selected':''}>priced per ml</option>
+        <option value="each" ${prefillUnit==='each'?'selected':''}>priced per each</option>
       </select>
       <input type="text" class="mp-cost" placeholder="cost/unit">
-      <input type="text" class="mp-kcal" placeholder="kcal/unit">
-      <input type="text" class="mp-protein" placeholder="protein g/unit">
+      <input type="text" class="mp-kcal" placeholder="kcal/unit" value="${prefillKcal}">
+      <input type="text" class="mp-protein" placeholder="protein g/unit" value="${prefillProtein}">
     </div>
     <button type="button" class="btn small" style="margin-top:6px;" id="btn-mp-save-${row.id}">Save to pantry</button>
   `;
@@ -1411,7 +1625,8 @@ function openMiniPantryForm(rowEl, row, d){
     const kcalPerUnit = parseFloat(slot.querySelector('.mp-kcal').value) || 0;
     const proteinPerUnit = parseFloat(slot.querySelector('.mp-protein').value) || 0;
     if(!name){ alert('Give the pantry item a name.'); return; }
-    const item = { id: genId(), name, aliases: [], unit, costPerUnit, kcalPerUnit, proteinPerUnit, density: null };
+    const aliases = sug && Array.isArray(sug.aliases) ? sug.aliases : [];
+    const item = { id: genId(), name, aliases, unit, costPerUnit, kcalPerUnit, proteinPerUnit, density: null };
     pantry.push(item);
     try{
       await savePantry();
@@ -1433,10 +1648,12 @@ function collectFormIntoDetail(){
   d.title = document.getElementById('f-title').value.trim();
   d.tags = tagsToArray(document.getElementById('f-tags').value);
   d.status = document.getElementById('f-status').value;
+  d.mainCarb = document.getElementById('f-main-carb').value;
+  d.mainProtein = document.getElementById('f-main-protein').value;
   d.servings = document.getElementById('f-servings').value.trim();
   // d.ingredients is kept live-updated by the ingredient row editor, not read from a textarea.
   d.ingredients = (d.ingredients||[]).filter(row => row.name && row.name.trim());
-  d.instructions = linesToArray(document.getElementById('f-instructions').value);
+  d.instructions = linesToArray(document.getElementById('f-instructions').value).map(cleanPastedLine);
   d.notes = document.getElementById('f-notes').value.trim();
   d.sources = linesToArray(document.getElementById('f-sources').value);
   d.updatedAt = new Date().toISOString();
@@ -1469,7 +1686,10 @@ document.getElementById('btn-save').onclick = async ()=>{
     await saveSummary();
     hint.textContent = '';
     showToast('Saved');
-    closePanel();
+    isNewRecipe = false;
+    editSnapshot = null;
+    document.getElementById('panel-eyebrow').textContent = d.status === 'made' ? 'Made it' : 'Want to try';
+    renderReadOnly(d);
     renderList();
   }catch(e){
     hint.textContent = '';
@@ -1667,6 +1887,154 @@ document.getElementById('btn-pantry-save').onclick = async ()=>{
   }
 };
 
+/* ==================== Shopping list ==================== */
+let shoppingSelected = new Set();     // recipe ids
+let shoppingDetailCache = {};         // recipe id -> loaded detail (fetched lazily, cached for the session)
+let shoppingChecked = new Set();      // group keys checked off while shopping (ephemeral, not saved)
+
+document.getElementById('btn-shopping').onclick = async ()=>{
+  await loadPantry();
+  document.getElementById('shopping-overlay').classList.add('open');
+  renderShoppingRecipePicker();
+  renderShoppingListOutput();
+};
+document.getElementById('btn-shopping-close').onclick = ()=>{
+  document.getElementById('shopping-overlay').classList.remove('open');
+};
+document.getElementById('shopping-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'shopping-overlay') document.getElementById('shopping-overlay').classList.remove('open');
+});
+
+function renderShoppingRecipePicker(){
+  const wrap = document.getElementById('shopping-recipe-picker');
+  wrap.innerHTML = recipes.map(r=>{
+    const safeId = 'shop-r-' + r.id.replace(/[^a-zA-Z0-9_-]/g,'_');
+    return `
+      <div class="shopping-recipe-row">
+        <input type="checkbox" id="${safeId}" ${shoppingSelected.has(r.id)?'checked':''}>
+        <label for="${safeId}">${escapeHtml(r.title || 'Untitled recipe')}</label>
+      </div>
+    `;
+  }).join('');
+  wrap.querySelectorAll('input[type=checkbox]').forEach((cb, idx)=>{
+    const recipeId = recipes[idx].id;
+    cb.onchange = async ()=>{
+      if(cb.checked) shoppingSelected.add(recipeId); else shoppingSelected.delete(recipeId);
+      await rebuildShoppingList();
+    };
+  });
+}
+
+async function rebuildShoppingList(){
+  const toFetch = Array.from(shoppingSelected).filter(id => !shoppingDetailCache[id]);
+  for(let i=0; i<toFetch.length; i++){
+    const id = toFetch[i];
+    const summary = recipes.find(r=>r.id===id);
+    if(summary){
+      try{
+        const detail = await loadDetail(summary.detailFileId);
+        normalizeIngredients(detail);
+        shoppingDetailCache[id] = detail;
+      }catch(e){ /* skip this recipe on failure, others still show */ }
+    }
+    if(i < toFetch.length - 1) await new Promise(r=>setTimeout(r, 180)); // throttle sequential fetches
+  }
+  renderShoppingListOutput();
+}
+
+// Groups by pantryId when ingredients are matched (so "chicken breast" from two
+// recipes combines into one weighed line even if written differently). Unmatched
+// ingredients fall back to grouping by name+unit text — no unit conversion since
+// there's no pantry item to convert against.
+function buildShoppingGroups(){
+  const groups = {};
+  Array.from(shoppingSelected).forEach(id=>{
+    const detail = shoppingDetailCache[id];
+    if(!detail) return;
+    (detail.ingredients||[]).forEach(row=>{
+      if(row.pantryId){
+        const item = pantry.find(p=>p.id===row.pantryId);
+        if(item){
+          const qty = parseQuantityString(row.quantity);
+          let amount = null;
+          if(item.unit === 'each'){
+            if(!row.unit || row.unit === 'each') amount = qty;
+          } else if(item.unit === 'g'){
+            const g = toGrams(qty, row.unit);
+            if(g != null) amount = g;
+            else { const ml = toMl(qty, row.unit); if(ml != null && item.density) amount = ml * item.density; }
+          } else if(item.unit === 'ml'){
+            const ml = toMl(qty, row.unit);
+            if(ml != null) amount = ml;
+            else { const g = toGrams(qty, row.unit); if(g != null && item.density) amount = g / item.density; }
+          }
+          const key = 'pantry:' + item.id;
+          if(!groups[key]) groups[key] = { key, label:item.name, unit:item.unit, amount:0, matched:true, pantryId:item.id, notes:[] };
+          if(amount != null) groups[key].amount += amount;
+          else groups[key].notes.push(formatIngredientLine(row));
+          return;
+        }
+      }
+      const key = 'text:' + row.name.toLowerCase().trim() + '|' + (row.unit||'');
+      if(!groups[key]) groups[key] = { key, label:row.name, unit:row.unit, amount:0, matched:false, notes:[] };
+      const qty = parseQuantityString(row.quantity);
+      if(qty != null) groups[key].amount += qty;
+      else groups[key].notes.push(row.quantity || '(no amount given)');
+    });
+  });
+  return Object.values(groups);
+}
+
+function renderShoppingListOutput(){
+  const header = document.getElementById('shopping-list-header');
+  const out = document.getElementById('shopping-list-output');
+  const footer = document.getElementById('shopping-footer');
+  if(!shoppingSelected.size){
+    header.style.display = 'none'; out.innerHTML = ''; footer.style.display = 'none';
+    return;
+  }
+  const groups = buildShoppingGroups().sort((a,b)=>a.label.localeCompare(b.label));
+  header.style.display = 'block';
+  if(!groups.length){
+    out.innerHTML = '<p class="field-hint">No ingredients found in the selected recipes.</p>';
+    footer.style.display = 'none';
+    return;
+  }
+  let totalCost = 0, priced = 0;
+  out.innerHTML = groups.map(g=>{
+    const amountText = (g.amount > 0) ? `${Math.round(g.amount*10)/10} ${unitLabel(g.unit)}`.trim() : '';
+    let costText = '';
+    if(g.matched){
+      const item = pantry.find(p=>p.id===g.pantryId);
+      if(item && item.costPerUnit){
+        const cost = g.amount * item.costPerUnit;
+        totalCost += cost; priced++;
+        costText = `$${cost.toFixed(2)}`;
+      }
+    }
+    const notesText = g.notes.length ? ` <span class="field-hint">(+ ${g.notes.map(n=>escapeHtml(n)).join(', ')})</span>` : '';
+    const safeId = 'shop-i-' + g.key.replace(/[^a-zA-Z0-9_-]/g,'_');
+    return `
+      <div class="shopping-list-row${shoppingChecked.has(g.key)?' checked':''}" data-key="${escapeHtml(g.key)}">
+        <input type="checkbox" id="${safeId}" ${shoppingChecked.has(g.key)?'checked':''}>
+        <label for="${safeId}">${escapeHtml(amountText)} ${escapeHtml(g.label)}${notesText}</label>
+        <span class="shopping-list-cost">${costText}</span>
+      </div>
+    `;
+  }).join('');
+  out.querySelectorAll('.shopping-list-row').forEach(rowEl=>{
+    const key = rowEl.dataset.key;
+    const cb = rowEl.querySelector('input[type=checkbox]');
+    cb.onchange = ()=>{
+      if(cb.checked) shoppingChecked.add(key); else shoppingChecked.delete(key);
+      rowEl.classList.toggle('checked', cb.checked);
+    };
+  });
+  footer.style.display = priced > 0 ? 'flex' : 'none';
+  document.getElementById('shopping-total').textContent = priced > 0
+    ? `Estimated total: ~$${totalCost.toFixed(2)} (${priced} of ${groups.length} priced)` : '';
+}
+
 /* ==================== Filter wiring ==================== */
 document.getElementById('search-input').addEventListener('input', (e)=>{
   searchQuery = e.target.value;
@@ -1679,6 +2047,13 @@ document.querySelectorAll('#status-filter button').forEach(btn=>{
     renderList();
   };
 });
+
+document.getElementById('btn-randomizer').onclick = ()=>{
+  const items = filteredRecipes();
+  if(!items.length){ showToast('No recipes match your current filters'); return; }
+  const pick = items[Math.floor(Math.random() * items.length)];
+  openDetail(pick.id);
+};
 
 /* ==================== Service worker ==================== */
 if('serviceWorker' in navigator){
