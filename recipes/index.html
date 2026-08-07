@@ -1,1 +1,1022 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recipes — a shared cookbook</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#23312A">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,600;1,6..72,500;1,6..72,600&family=Inter:wght@400;500;600;700&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#23312A;
+    --bg-soft:#2A3B32;
+    --bg-elevated:#324B3F;
+    --card:#F0E6CE;
+    --card-edge:#C98A2B;
+    --ink:#1B2420;
+    --ink-soft:#5B6B5E;
+    --cream:#EDE6D3;
+    --cream-soft:#AEBCAF;
+    --mustard:#C98A2B;
+    --mustard-soft:#E0B15C;
+    --tomato:#B5482F;
+    --line:rgba(27,36,32,.14);
+    --line-on-dark:rgba(237,230,211,.16);
+    --radius:14px;
+    --font-display:'Newsreader',serif;
+    --font-body:'Inter',sans-serif;
+    --font-mono:'Space Mono',monospace;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--cream);
+    font-family:var(--font-body);
+    min-height:100vh;
+    -webkit-font-smoothing:antialiased;
+  }
+  @media (prefers-reduced-motion:reduce){
+    *{animation-duration:.001ms !important; transition-duration:.001ms !important;}
+  }
+  a{color:var(--mustard-soft);}
+  button{font-family:inherit;}
+  .editor-only{display:none;}
+  body.is-editor .editor-only{display:initial;}
+  body.is-editor button.editor-only{display:inline-flex;}
+  body.is-editor .editor-only-flex{display:flex;}
 
+  /* ---------- Header ---------- */
+  header{
+    position:sticky; top:0; z-index:20;
+    background:var(--bg-soft);
+    border-bottom:1px solid var(--line-on-dark);
+    padding:16px 20px;
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+  }
+  .brand{display:flex; flex-direction:column; gap:2px;}
+  .brand .eyebrow{
+    font-family:var(--font-mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+    color:var(--mustard-soft);
+  }
+  .brand h1{
+    font-family:var(--font-display); font-style:italic; font-weight:600;
+    font-size:26px; margin:0; color:var(--cream);
+  }
+  .header-actions{display:flex; align-items:center; gap:8px;}
+  .btn{
+    font-family:var(--font-body); font-size:14px; font-weight:600;
+    padding:9px 16px; border-radius:999px; border:1px solid var(--line-on-dark);
+    background:transparent; color:var(--cream); cursor:pointer;
+    transition:background .15s, transform .1s, border-color .15s;
+  }
+  .btn:hover{background:rgba(237,230,211,.08);}
+  .btn:active{transform:scale(.97);}
+  .btn.primary{background:var(--mustard); border-color:var(--mustard); color:var(--ink);}
+  .btn.primary:hover{background:var(--mustard-soft);}
+  .btn.danger{background:transparent; border-color:var(--tomato); color:#E8A390;}
+  .btn.danger:hover{background:rgba(181,72,47,.15);}
+  .btn.small{padding:6px 12px; font-size:13px;}
+  .btn[disabled]{opacity:.5; cursor:default; pointer-events:none;}
+  .btn.owner{border-color:var(--mustard); color:var(--mustard-soft);}
+
+  /* ---------- Toolbar / filters ---------- */
+  .toolbar{
+    max-width:760px; margin:0 auto; padding:18px 20px 4px;
+    display:flex; flex-direction:column; gap:12px;
+  }
+  .search-row{display:flex; gap:8px;}
+  .search-row input[type=text]{
+    flex:1; background:var(--bg-elevated); border:1px solid var(--line-on-dark);
+    border-radius:10px; padding:10px 14px; color:var(--cream); font-size:15px;
+  }
+  .search-row input[type=text]::placeholder{color:var(--cream-soft);}
+  .search-row input[type=text]:focus{outline:2px solid var(--mustard); outline-offset:1px;}
+  .filter-row{display:flex; align-items:center; gap:10px; flex-wrap:wrap;}
+  .segmented{display:flex; border:1px solid var(--line-on-dark); border-radius:999px; overflow:hidden;}
+  .segmented button{
+    background:transparent; border:none; color:var(--cream-soft); font-size:13px; font-weight:600;
+    padding:7px 13px; cursor:pointer; font-family:var(--font-body);
+  }
+  .segmented button.active{background:var(--mustard); color:var(--ink);}
+  .tag-chips{display:flex; gap:6px; flex-wrap:wrap;}
+  .tag-chip{
+    font-family:var(--font-mono); font-size:12px; padding:5px 11px; border-radius:999px;
+    border:1px solid var(--line-on-dark); background:transparent; color:var(--cream-soft); cursor:pointer;
+  }
+  .tag-chip.active{background:var(--mustard-soft); border-color:var(--mustard-soft); color:var(--ink);}
+
+  /* ---------- List (recipe box) ---------- */
+  .list-wrap{max-width:760px; margin:0 auto; padding:18px 20px 80px; position:relative;}
+  .list-wrap::before{
+    content:""; position:absolute; left:26px; top:8px; bottom:40px; width:0;
+    border-left:2px dashed var(--line-on-dark);
+  }
+  .recipe-list{display:flex; flex-direction:column; gap:14px; padding-left:26px;}
+  .recipe-card{
+    position:relative;
+    background:var(--card); color:var(--ink); border-radius:var(--radius);
+    padding:14px 16px 14px 20px; display:flex; gap:14px; align-items:center;
+    box-shadow:0 2px 0 var(--card-edge);
+    cursor:pointer; transition:transform .12s ease;
+  }
+  .recipe-card:hover{transform:translateY(-2px) rotate(-.2deg);}
+  .recipe-card:focus-visible{outline:3px solid var(--mustard-soft); outline-offset:2px;}
+  .recipe-card::before{
+    content:""; position:absolute; left:-32px; top:50%; transform:translateY(-50%);
+    width:12px; height:12px; border-radius:50%; background:var(--bg);
+    border:2px solid var(--mustard-soft);
+  }
+  .thumb{
+    width:60px; height:60px; border-radius:10px; flex:none; object-fit:cover;
+    background:var(--mustard-soft);
+  }
+  .thumb-placeholder{
+    width:60px; height:60px; border-radius:10px; flex:none;
+    background:var(--mustard-soft); display:flex; align-items:center; justify-content:center;
+    font-size:22px;
+  }
+  .card-body{flex:1; min-width:0;}
+  .card-title{
+    font-family:var(--font-display); font-weight:600; font-size:19px; margin:0 0 4px;
+    white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+  }
+  .card-meta{
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    font-family:var(--font-mono); font-size:11.5px; color:var(--ink-soft);
+  }
+  .status-dot{width:9px; height:9px; border-radius:50%; display:inline-block; border:1.5px solid var(--tomato);}
+  .status-dot.made{background:var(--tomato);}
+  .card-tags{display:flex; gap:5px; flex-wrap:wrap; margin-top:5px;}
+  .pill{
+    font-family:var(--font-mono); font-size:10.5px; padding:2px 8px; border-radius:999px;
+    background:rgba(27,36,32,.08); color:var(--ink-soft);
+  }
+  .empty-state{
+    padding:40px 20px; text-align:center; color:var(--cream-soft); font-size:15px; line-height:1.5;
+  }
+  .status-line{
+    max-width:760px; margin:0 auto; padding:0 20px; font-family:var(--font-mono);
+    font-size:12px; color:var(--cream-soft); min-height:18px;
+  }
+
+  /* ---------- Detail overlay ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(15,20,17,.55); backdrop-filter:blur(2px);
+    z-index:50; display:none;
+  }
+  .overlay.open{display:block;}
+  .panel{
+    position:absolute; top:0; right:0; bottom:0; width:min(600px,100%);
+    background:var(--bg-elevated); display:flex; flex-direction:column;
+    box-shadow:-8px 0 30px rgba(0,0,0,.35);
+  }
+  .panel-header{
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+    padding:16px 20px; border-bottom:1px solid var(--line-on-dark);
+  }
+  .panel-header .eyebrow{font-family:var(--font-mono); font-size:11px; color:var(--mustard-soft); text-transform:uppercase; letter-spacing:.08em;}
+  .icon-btn{
+    background:transparent; border:none; color:var(--cream); font-size:22px; line-height:1;
+    cursor:pointer; padding:4px 8px; border-radius:8px;
+  }
+  .icon-btn:hover{background:rgba(237,230,211,.1);}
+  .panel-body{flex:1; overflow-y:auto; padding:20px;}
+  .panel-footer{
+    padding:14px 20px; border-top:1px solid var(--line-on-dark);
+    display:flex; align-items:center; justify-content:space-between; gap:10px;
+  }
+  .save-hint{font-family:var(--font-mono); font-size:12px; color:var(--cream-soft);}
+
+  .field{margin-bottom:18px;}
+  .field label{
+    display:block; font-family:var(--font-mono); font-size:11px; text-transform:uppercase;
+    letter-spacing:.06em; color:var(--mustard-soft); margin-bottom:6px;
+  }
+  .field input[type=text], .field input[type=number], .field textarea, .field select{
+    width:100%; background:var(--bg-soft); border:1px solid var(--line-on-dark); border-radius:10px;
+    padding:10px 12px; color:var(--cream); font-family:var(--font-body); font-size:15px; resize:vertical;
+  }
+  .field textarea{min-height:90px; line-height:1.5; font-family:var(--font-body);}
+  .field input:focus, .field textarea:focus, .field select:focus{outline:2px solid var(--mustard); outline-offset:1px;}
+  .field-hint{font-size:12px; color:var(--cream-soft); margin-top:4px;}
+  .row3{display:grid; grid-template-columns:1fr 1fr 1fr; gap:10px;}
+
+  .detail-title{font-family:var(--font-display); font-weight:600; font-size:30px; margin:0 0 8px; color:var(--cream);}
+  .detail-meta{display:flex; gap:14px; flex-wrap:wrap; font-family:var(--font-mono); font-size:12.5px; color:var(--cream-soft); margin-bottom:10px;}
+  .detail-tags{display:flex; gap:6px; flex-wrap:wrap; margin-bottom:16px;}
+  .detail-section{margin-bottom:22px;}
+  .detail-section h3{
+    font-family:var(--font-mono); font-size:12px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--mustard-soft); margin:0 0 8px;
+  }
+  .detail-section ul, .detail-section ol{margin:0; padding-left:20px; line-height:1.7;}
+  .detail-section p{line-height:1.6; margin:0; white-space:pre-wrap;}
+  .photo-strip{display:flex; gap:10px; overflow-x:auto; padding-bottom:6px; margin-bottom:16px;}
+  .photo-strip img, .photo-strip .photo-slot{
+    width:120px; height:120px; border-radius:10px; object-fit:cover; flex:none; background:var(--bg-soft);
+  }
+  .photo-strip a{display:block;}
+  .photo-edit-grid{display:flex; gap:10px; flex-wrap:wrap; margin-bottom:10px;}
+  .photo-edit-item{position:relative; width:88px; height:88px;}
+  .photo-edit-item img{width:100%; height:100%; object-fit:cover; border-radius:8px; display:block;}
+  .photo-edit-item .remove{
+    position:absolute; top:-6px; right:-6px; width:22px; height:22px; border-radius:50%;
+    background:var(--tomato); color:#fff; border:none; cursor:pointer; font-size:13px; line-height:1;
+  }
+  .photo-edit-item .spinner{
+    position:absolute; inset:0; background:rgba(0,0,0,.4); border-radius:8px;
+    display:flex; align-items:center; justify-content:center; font-family:var(--font-mono); font-size:10px; color:#fff;
+  }
+  .add-photo-btn{
+    width:88px; height:88px; border-radius:8px; border:1.5px dashed var(--line-on-dark);
+    background:transparent; color:var(--cream-soft); cursor:pointer; font-size:22px;
+  }
+  .toast{
+    position:fixed; bottom:20px; left:50%; transform:translateX(-50%);
+    background:var(--card); color:var(--ink); padding:10px 18px; border-radius:999px;
+    font-size:13px; font-weight:600; box-shadow:0 4px 16px rgba(0,0,0,.3); z-index:100;
+    opacity:0; pointer-events:none; transition:opacity .2s;
+  }
+  .toast.show{opacity:1;}
+
+  @media (max-width:520px){
+    .row3{grid-template-columns:1fr;}
+    header{padding:14px 16px;}
+    .toolbar, .list-wrap{padding-left:14px; padding-right:14px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="eyebrow">A shared cookbook</span>
+    <h1>Recipes</h1>
+  </div>
+  <div class="header-actions">
+    <button class="btn editor-only" id="btn-add" style="display:none;">+ New recipe</button>
+    <button class="btn" id="btn-signin">Sign in</button>
+    <button class="btn small editor-only" id="btn-signout" style="display:none;">Sign out</button>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="search-row">
+    <input type="text" id="search-input" placeholder="Search by title or tag…">
+  </div>
+  <div class="filter-row">
+    <div class="segmented" id="status-filter">
+      <button class="active" data-val="all">All</button>
+      <button data-val="want">Want to try</button>
+      <button data-val="made">Made it</button>
+    </div>
+    <div class="tag-chips" id="tag-chips"></div>
+  </div>
+</div>
+
+<div class="status-line" id="status-line"></div>
+
+<div class="list-wrap">
+  <div class="recipe-list" id="recipe-list"></div>
+  <div class="empty-state" id="empty-state" style="display:none;"></div>
+</div>
+
+<div class="overlay" id="overlay">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="eyebrow" id="panel-eyebrow">Recipe</div>
+      </div>
+      <button class="icon-btn" id="btn-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="panel-body" id="panel-body"></div>
+    <div class="panel-footer" id="panel-footer" style="display:none;">
+      <button class="btn danger editor-only" id="btn-delete">Delete</button>
+      <div style="flex:1; text-align:right; display:flex; align-items:center; justify-content:flex-end; gap:10px;">
+        <span class="save-hint" id="save-hint"></span>
+        <button class="btn primary editor-only" id="btn-save">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
+<script src="https://accounts.google.com/gsi/client" async defer></script>
+<script>
+/* ==================== Config ==================== */
+const DRIVE_CLIENT_ID = '580736928697-9mh5496ktk1tgd571ngop4unka5aln1b.apps.googleusercontent.com';
+const DRIVE_API_KEY = 'AIzaSyDcxsbE66fTwSM5YAmWizMa10y64aChHbg';
+const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive';
+const FOLDER_NAME = 'Recipes';
+const SUMMARY_FILE_NAME = 'recipes-data.json';
+// Baked in once bootstrapped for real — see bootstrapSharedStorage().
+let SUMMARY_FILE_ID = localStorage.getItem('recipes:summaryFileId') || '';
+let recipesFolderId = localStorage.getItem('recipes:folderId') || '';
+
+/* ==================== State ==================== */
+let recipes = [];          // summary entries
+let isEditor = false;
+let editorName = localStorage.getItem('recipes:editorName') || '';
+let tokenClient = null;
+let accessToken = null;
+let tokenExpiresAt = 0;
+let statusFilter = 'all';
+let activeTag = null;
+let searchQuery = '';
+let currentDetail = null;  // full object of the recipe open in the panel
+let currentPhotosUploading = 0;
+let isNewRecipe = false;
+
+/* ==================== Small helpers ==================== */
+function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
+function escapeHtml(s){ const d=document.createElement('div'); d.textContent = s==null?'':String(s); return d.innerHTML; }
+function linesToArray(text){ return (text||'').split('\n').map(s=>s.trim()).filter(Boolean); }
+function tagsToArray(text){ return (text||'').split(',').map(s=>s.trim()).filter(Boolean); }
+function looksLikeUrl(s){ return /^https?:\/\/\S+$/i.test((s||'').trim()); }
+function publicFileUrl(fileId){ return `https://www.googleapis.com/drive/v3/files/${fileId}?alt=media&key=${DRIVE_API_KEY}`; }
+function setStatus(msg){ document.getElementById('status-line').textContent = msg || ''; }
+function showToast(msg){
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.classList.add('show');
+  clearTimeout(showToast._t);
+  showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ==================== Drive auth ==================== */
+function initDriveAuth(){
+  if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
+  tokenClient = google.accounts.oauth2.initTokenClient({
+    client_id: DRIVE_CLIENT_ID,
+    scope: DRIVE_SCOPES,
+    callback: ()=>{},
+  });
+}
+
+function trySilentSignIn(){
+  return new Promise((resolve)=>{
+    if(!tokenClient){ resolve(false); return; }
+    tokenClient.callback = (resp)=>{
+      if(resp.error){ resolve(false); return; }
+      accessToken = resp.access_token;
+      tokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      resolve(true);
+    };
+    try{ tokenClient.requestAccessToken({ prompt:'' }); }
+    catch(e){ resolve(false); }
+  });
+}
+
+async function attemptSilentSignIn(){
+  let tries = 0;
+  while(!tokenClient && tries < 25){ await new Promise(r=>setTimeout(r,200)); tries++; }
+  if(!tokenClient) return;
+  const ok = await trySilentSignIn();
+  if(ok){
+    isEditor = true;
+    ensureEditorName();
+    applyEditorUI();
+    await afterSignIn();
+  }
+}
+
+function requestDriveToken(){
+  return new Promise((resolve, reject)=>{
+    if(accessToken && Date.now() < tokenExpiresAt - 60000){ resolve(accessToken); return; }
+    if(!tokenClient){ reject(new Error('Google auth not ready yet')); return; }
+    tokenClient.callback = (resp)=>{
+      if(resp.error){ reject(new Error(resp.error)); return; }
+      accessToken = resp.access_token;
+      tokenExpiresAt = Date.now() + (resp.expires_in ? resp.expires_in*1000 : 3600*1000);
+      resolve(accessToken);
+    };
+    tokenClient.requestAccessToken({ prompt: accessToken ? '' : 'consent' });
+  });
+}
+
+function ensureEditorName(){
+  if(editorName) return;
+  const name = prompt("What's your name? This tags recipes with who added them.", '');
+  if(name && name.trim()){
+    editorName = name.trim();
+    localStorage.setItem('recipes:editorName', editorName);
+  }
+}
+
+function applyEditorUI(){
+  document.body.classList.toggle('is-editor', isEditor);
+  document.getElementById('btn-signin').textContent = isEditor ? (editorName || 'Signed in ✓') : 'Sign in';
+  document.getElementById('btn-signin').classList.toggle('owner', isEditor);
+  document.getElementById('btn-add').style.display = isEditor ? 'inline-flex' : 'none';
+  document.getElementById('btn-signout').style.display = isEditor ? 'inline-flex' : 'none';
+}
+
+document.getElementById('btn-signin').onclick = async ()=>{
+  if(isEditor){
+    const name = prompt('Change your display name:', editorName || '');
+    if(name && name.trim()){
+      editorName = name.trim();
+      localStorage.setItem('recipes:editorName', editorName);
+      applyEditorUI();
+    }
+    return;
+  }
+  try{
+    await requestDriveToken();
+    isEditor = true;
+    ensureEditorName();
+    applyEditorUI();
+    await afterSignIn();
+  }catch(e){
+    alert("Couldn't sign in — make sure you're using the Google account this app was set up with.");
+  }
+};
+
+document.getElementById('btn-signout').onclick = ()=>{
+  if(!confirm('Sign out of Recipes on this device?')) return;
+  const tokenToRevoke = accessToken;
+  isEditor = false;
+  accessToken = null;
+  tokenExpiresAt = 0;
+  applyEditorUI();
+  renderList();
+  closePanel();
+  if(tokenToRevoke && typeof google !== 'undefined' && google.accounts && google.accounts.oauth2){
+    try{ google.accounts.oauth2.revoke(tokenToRevoke, ()=>{}); }catch(e){}
+  }
+};
+
+async function afterSignIn(){
+  if(!SUMMARY_FILE_ID){
+    if(confirm('No shared storage found yet. Set it up now?')) await bootstrapSharedStorage();
+  }
+  renderList();
+}
+
+/* ==================== Drive generic helpers ==================== */
+async function driveFindFile(query){
+  const q = encodeURIComponent(query);
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}&fields=files(id,name)`, {
+    headers: { Authorization: 'Bearer ' + accessToken }
+  });
+  if(!res.ok) throw new Error('search failed ' + res.status);
+  const data = await res.json();
+  return (data.files && data.files[0]) || null;
+}
+
+async function driveSetPublic(fileId){
+  try{
+    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}/permissions`, {
+      method:'POST',
+      headers:{ 'Authorization':'Bearer ' + accessToken, 'Content-Type':'application/json' },
+      body: JSON.stringify({ role:'reader', type:'anyone' }),
+    });
+  }catch(e){}
+}
+
+async function driveCreateFile(blob, filename, parentId, mimeType){
+  const metadata = { name: filename };
+  if(parentId) metadata.parents = [parentId];
+  const boundary = '-------recipesBoundary' + Date.now();
+  const delimiter = `\r\n--${boundary}\r\n`;
+  const closeDelim = `\r\n--${boundary}--`;
+  const metaPart = delimiter + 'Content-Type: application/json; charset=UTF-8\r\n\r\n' + JSON.stringify(metadata);
+  const mediaPartHeader = delimiter + `Content-Type: ${mimeType}\r\n\r\n`;
+  const bodyBlob = new Blob([metaPart, mediaPartHeader, blob, closeDelim]);
+  const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id', {
+    method:'POST',
+    headers:{ 'Authorization':'Bearer ' + accessToken, 'Content-Type': `multipart/related; boundary=${boundary}` },
+    body: bodyBlob,
+  });
+  if(!res.ok) throw new Error('create failed ' + res.status);
+  const data = await res.json();
+  return data.id;
+}
+
+async function driveUpdateFileContent(fileId, blob, mimeType){
+  const res = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${fileId}?uploadType=media`, {
+    method:'PATCH',
+    headers:{ 'Authorization':'Bearer ' + accessToken, 'Content-Type': mimeType },
+    body: blob,
+  });
+  if(!res.ok) throw new Error('update failed ' + res.status);
+  return await res.json();
+}
+
+async function driveDeleteFile(fileId){
+  const res = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+    method:'DELETE',
+    headers:{ 'Authorization':'Bearer ' + accessToken },
+  });
+  if(!res.ok && res.status !== 404) throw new Error('delete failed ' + res.status);
+}
+
+/* ==================== Folder + summary bootstrap ==================== */
+async function ensureRecipesFolder(){
+  if(recipesFolderId) return recipesFolderId;
+  const folder = await driveFindFile(`name='${FOLDER_NAME}' and mimeType='application/vnd.google-apps.folder' and trashed=false`);
+  if(!folder) throw new Error(`Couldn't find a Drive folder named "${FOLDER_NAME}". Create it first, or check the name.`);
+  recipesFolderId = folder.id;
+  localStorage.setItem('recipes:folderId', recipesFolderId);
+  return recipesFolderId;
+}
+
+async function bootstrapSharedStorage(){
+  setStatus('Setting up shared storage…');
+  try{
+    const folderId = await ensureRecipesFolder();
+    let file = await driveFindFile(`name='${SUMMARY_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
+    let fileId;
+    if(file){
+      fileId = file.id;
+    } else {
+      const blob = new Blob([JSON.stringify({ recipes: [] })], { type:'application/json' });
+      fileId = await driveCreateFile(blob, SUMMARY_FILE_NAME, folderId, 'application/json');
+      await driveSetPublic(fileId);
+    }
+    SUMMARY_FILE_ID = fileId;
+    localStorage.setItem('recipes:summaryFileId', fileId);
+    setStatus(`Shared storage ready. Summary file ID: ${fileId}`);
+    window.prompt('Shared storage is set up. Copy this Summary File ID and send it back so it can be baked permanently into the app:', fileId);
+    await loadSummary();
+    renderList();
+  }catch(e){
+    setStatus('Setup failed: ' + e.message);
+    alert('Setup failed: ' + e.message);
+  }
+}
+
+/* ==================== Summary + detail data ==================== */
+async function loadSummary(){
+  if(!SUMMARY_FILE_ID){
+    recipes = [];
+    return;
+  }
+  try{
+    const res = await fetch(publicFileUrl(SUMMARY_FILE_ID));
+    if(!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    recipes = data.recipes || [];
+    setStatus('');
+  }catch(e){
+    recipes = [];
+    setStatus("Couldn't load the shared recipe list right now.");
+  }
+}
+
+async function saveSummary(){
+  const folderId = await ensureRecipesFolder();
+  if(!SUMMARY_FILE_ID){
+    const blob = new Blob([JSON.stringify({ recipes })], { type:'application/json' });
+    const fileId = await driveCreateFile(blob, SUMMARY_FILE_NAME, folderId, 'application/json');
+    await driveSetPublic(fileId);
+    SUMMARY_FILE_ID = fileId;
+    localStorage.setItem('recipes:summaryFileId', fileId);
+  } else {
+    const blob = new Blob([JSON.stringify({ recipes })], { type:'application/json' });
+    await driveUpdateFileContent(SUMMARY_FILE_ID, blob, 'application/json');
+  }
+}
+
+async function loadDetail(fileId){
+  const res = await fetch(publicFileUrl(fileId));
+  if(!res.ok) throw new Error('status ' + res.status);
+  return await res.json();
+}
+
+function slimForSummary(d){
+  return {
+    id: d.id,
+    detailFileId: d.detailFileId,
+    title: d.title,
+    tags: d.tags,
+    status: d.status,
+    prepTime: d.prepTime,
+    cookTime: d.cookTime,
+    servings: d.servings,
+    addedBy: d.addedBy,
+    thumbFileId: (d.photos && d.photos[0]) ? d.photos[0].fileId : null,
+    updatedAt: d.updatedAt,
+  };
+}
+
+/* ==================== Photo upload ==================== */
+async function fileToUploadBlob(file){
+  let workingBlob = file;
+  const isHeic = /heic|heif/i.test(file.type) || /\.hei[cf]$/i.test(file.name);
+  if(isHeic){
+    try{
+      workingBlob = await heic2any({ blob: file, toType: 'image/jpeg', quality: 0.85 });
+    }catch(e){
+      throw new Error("Couldn't convert this HEIC photo. Try a JPG/PNG instead.");
+    }
+  }
+  const bitmap = await createImageBitmap(workingBlob, { imageOrientation: 'from-image' }).catch(()=>createImageBitmap(workingBlob));
+  const maxEdge = 1600;
+  let { width, height } = bitmap;
+  if(width > maxEdge || height > maxEdge){
+    const scale = maxEdge / Math.max(width, height);
+    width = Math.round(width * scale);
+    height = Math.round(height * scale);
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = width; canvas.height = height;
+  canvas.getContext('2d').drawImage(bitmap, 0, 0, width, height);
+  const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+  return blob;
+}
+
+async function uploadPhotosSequentially(files, targetArray, gridEl){
+  const folderId = await ensureRecipesFolder();
+  for(let i=0; i<files.length; i++){
+    const file = files[i];
+    const slotId = genId();
+    const slot = document.createElement('div');
+    slot.className = 'photo-edit-item';
+    slot.id = 'slot-' + slotId;
+    slot.innerHTML = `<div class="spinner">Uploading…</div>`;
+    gridEl.insertBefore(slot, gridEl.querySelector('.add-photo-btn'));
+    currentPhotosUploading++;
+    updateSaveAvailability();
+    try{
+      const blob = await fileToUploadBlob(file);
+      const name = `recipe-${currentDetail.id}-photo-${genId()}.jpg`;
+      const fileId = await driveCreateFile(blob, name, folderId, 'image/jpeg');
+      await driveSetPublic(fileId);
+      targetArray.push({ fileId, name: file.name || name });
+      renderPhotoEditGrid(targetArray, gridEl);
+    }catch(e){
+      slot.innerHTML = `<div class="spinner">Failed</div>`;
+      setTimeout(()=>slot.remove(), 1800);
+      showToast('Photo upload failed: ' + e.message);
+    }finally{
+      currentPhotosUploading--;
+      updateSaveAvailability();
+    }
+    if(i < files.length - 1) await new Promise(r=>setTimeout(r, 220)); // throttle: avoid parallel bursts
+  }
+}
+
+function updateSaveAvailability(){
+  const btn = document.getElementById('btn-save');
+  if(!btn) return;
+  btn.disabled = currentPhotosUploading > 0;
+  document.getElementById('save-hint').textContent = currentPhotosUploading > 0 ? 'Uploading photos…' : '';
+}
+
+function renderPhotoEditGrid(photosArr, gridEl){
+  const addBtn = gridEl.querySelector('.add-photo-btn');
+  gridEl.querySelectorAll('.photo-edit-item').forEach(el=>el.remove());
+  photosArr.forEach((p, idx)=>{
+    const item = document.createElement('div');
+    item.className = 'photo-edit-item';
+    item.innerHTML = `<img src="${publicFileUrl(p.fileId)}" alt=""><button class="remove" type="button" title="Remove">&times;</button>`;
+    item.querySelector('.remove').onclick = ()=>{
+      photosArr.splice(idx, 1);
+      renderPhotoEditGrid(photosArr, gridEl);
+    };
+    gridEl.insertBefore(item, addBtn);
+  });
+}
+
+/* ==================== Rendering: list ==================== */
+function allTags(){
+  const set = new Set();
+  recipes.forEach(r => (r.tags||[]).forEach(t => set.add(t)));
+  return Array.from(set).sort((a,b)=>a.localeCompare(b));
+}
+
+function renderTagChips(){
+  const wrap = document.getElementById('tag-chips');
+  const tags = allTags();
+  wrap.innerHTML = tags.map(t =>
+    `<button class="tag-chip${activeTag===t?' active':''}" data-tag="${escapeHtml(t)}">${escapeHtml(t)}</button>`
+  ).join('');
+  wrap.querySelectorAll('.tag-chip').forEach(btn=>{
+    btn.onclick = ()=>{
+      activeTag = activeTag === btn.dataset.tag ? null : btn.dataset.tag;
+      renderList();
+    };
+  });
+}
+
+function filteredRecipes(){
+  return recipes.filter(r=>{
+    if(statusFilter !== 'all' && r.status !== statusFilter) return false;
+    if(activeTag && !(r.tags||[]).includes(activeTag)) return false;
+    if(searchQuery){
+      const hay = (r.title + ' ' + (r.tags||[]).join(' ')).toLowerCase();
+      if(!hay.includes(searchQuery.toLowerCase())) return false;
+    }
+    return true;
+  });
+}
+
+function renderList(){
+  renderTagChips();
+  const listEl = document.getElementById('recipe-list');
+  const emptyEl = document.getElementById('empty-state');
+  const items = filteredRecipes();
+
+  if(recipes.length === 0){
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = SUMMARY_FILE_ID
+      ? (isEditor ? 'No recipes yet — add the first one.' : 'No recipes yet.')
+      : (isEditor ? 'No shared storage set up yet — sign in to set it up.' : 'Sign in as an editor to set up shared storage.');
+    return;
+  }
+  if(items.length === 0){
+    listEl.innerHTML = '';
+    emptyEl.style.display = 'block';
+    emptyEl.textContent = 'No recipes match your filters.';
+    return;
+  }
+  emptyEl.style.display = 'none';
+
+  listEl.innerHTML = items.map(r => `
+    <div class="recipe-card" tabindex="0" role="button" data-id="${escapeHtml(r.id)}">
+      ${r.thumbFileId
+        ? `<img class="thumb" data-src="${publicFileUrl(r.thumbFileId)}" alt="">`
+        : `<div class="thumb-placeholder">🍽️</div>`}
+      <div class="card-body">
+        <p class="card-title">${escapeHtml(r.title || 'Untitled recipe')}</p>
+        <div class="card-meta">
+          <span><span class="status-dot${r.status==='made'?' made':''}"></span> ${r.status==='made'?'Made it':'Want to try'}</span>
+          ${r.prepTime ? `<span>Prep ${escapeHtml(r.prepTime)}</span>`:''}
+          ${r.cookTime ? `<span>Cook ${escapeHtml(r.cookTime)}</span>`:''}
+        </div>
+        ${(r.tags && r.tags.length) ? `<div class="card-tags">${r.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      </div>
+    </div>
+  `).join('');
+
+  listEl.querySelectorAll('.recipe-card').forEach(card=>{
+    card.onclick = ()=> openDetail(card.dataset.id);
+    card.onkeydown = (e)=>{ if(e.key==='Enter' || e.key===' '){ e.preventDefault(); openDetail(card.dataset.id); } };
+  });
+
+  // Throttled lazy-load of thumbnails to avoid firing many Drive requests at once.
+  const imgEls = Array.from(listEl.querySelectorAll('img.thumb[data-src]'));
+  throttledLoadImages(imgEls, 6, 180);
+}
+
+function throttledLoadImages(imgEls, batchSize, delayMs){
+  batchSize = batchSize || 6; delayMs = delayMs || 180;
+  let i = 0;
+  function next(){
+    imgEls.slice(i, i+batchSize).forEach(img=>{
+      if(img.dataset && img.dataset.src){ img.src = img.dataset.src; delete img.dataset.src; }
+    });
+    i += batchSize;
+    if(i < imgEls.length) setTimeout(next, delayMs);
+  }
+  next();
+}
+
+/* ==================== Detail panel ==================== */
+function closePanel(){
+  document.getElementById('overlay').classList.remove('open');
+  currentDetail = null;
+  isNewRecipe = false;
+}
+document.getElementById('btn-close').onclick = closePanel;
+document.getElementById('overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'overlay') closePanel();
+});
+
+async function openDetail(id){
+  const summary = recipes.find(r=>r.id===id);
+  if(!summary) return;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel-eyebrow').textContent = 'Loading…';
+  document.getElementById('panel-body').innerHTML = '';
+  document.getElementById('panel-footer').style.display = 'none';
+  try{
+    const detail = await loadDetail(summary.detailFileId);
+    currentDetail = detail;
+    isNewRecipe = false;
+    document.getElementById('panel-eyebrow').textContent = detail.status === 'made' ? 'Made it' : 'Want to try';
+    if(isEditor) renderEditForm(detail); else renderReadOnly(detail);
+  }catch(e){
+    document.getElementById('panel-body').innerHTML = `<p>Couldn't load this recipe right now.</p>`;
+  }
+}
+
+function openNewRecipe(){
+  currentDetail = {
+    id: genId(), detailFileId: null, title: '', tags: [], status: 'want',
+    servings: '', prepTime: '', cookTime: '', ingredients: [], instructions: [],
+    notes: '', sources: [], addedBy: editorName || '', photos: [],
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+  };
+  isNewRecipe = true;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel-eyebrow').textContent = 'New recipe';
+  renderEditForm(currentDetail);
+}
+document.getElementById('btn-add').onclick = openNewRecipe;
+
+function renderReadOnly(d){
+  const body = document.getElementById('panel-body');
+  const photos = d.photos || [];
+  body.innerHTML = `
+    ${photos.length ? `<div class="photo-strip">${photos.map(p=>`<a href="${publicFileUrl(p.fileId)}" target="_blank" rel="noopener"><img src="${publicFileUrl(p.fileId)}" alt=""></a>`).join('')}</div>` : ''}
+    <h2 class="detail-title">${escapeHtml(d.title)}</h2>
+    <div class="detail-meta">
+      ${d.servings ? `<span>Serves ${escapeHtml(d.servings)}</span>`:''}
+      ${d.prepTime ? `<span>Prep ${escapeHtml(d.prepTime)}</span>`:''}
+      ${d.cookTime ? `<span>Cook ${escapeHtml(d.cookTime)}</span>`:''}
+      ${d.addedBy ? `<span>Added by ${escapeHtml(d.addedBy)}</span>`:''}
+    </div>
+    ${(d.tags && d.tags.length) ? `<div class="detail-tags">${d.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}
+    ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section"><h3>Ingredients</h3><ul>${d.ingredients.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`:''}
+    ${(d.instructions && d.instructions.length) ? `<div class="detail-section"><h3>Instructions</h3><ol>${d.instructions.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ol></div>`:''}
+    ${d.notes ? `<div class="detail-section"><h3>Notes</h3><p>${escapeHtml(d.notes)}</p></div>`:''}
+    ${(d.sources && d.sources.length) ? `<div class="detail-section"><h3>Source</h3><p>${d.sources.map(s=>looksLikeUrl(s)?`<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(s)}</a>`:escapeHtml(s)).join('<br>')}</p></div>`:''}
+  `;
+  document.getElementById('panel-footer').style.display = 'none';
+}
+
+function renderEditForm(d){
+  const body = document.getElementById('panel-body');
+  body.innerHTML = `
+    <div class="field">
+      <label>Photos</label>
+      <div class="photo-edit-grid" id="photo-grid">
+        <button type="button" class="add-photo-btn" id="btn-add-photo">+</button>
+      </div>
+      <input type="file" id="photo-input" accept="image/*,.heic,.heif" multiple style="display:none;">
+    </div>
+    <div class="field">
+      <label>Title</label>
+      <input type="text" id="f-title" value="${escapeHtml(d.title)}" placeholder="e.g. Weeknight lemon pasta">
+    </div>
+    <div class="field">
+      <label>Tags</label>
+      <input type="text" id="f-tags" value="${escapeHtml((d.tags||[]).join(', '))}" placeholder="dinner, pasta, quick (comma separated)">
+    </div>
+    <div class="field">
+      <label>Status</label>
+      <select id="f-status">
+        <option value="want" ${d.status!=='made'?'selected':''}>Want to try</option>
+        <option value="made" ${d.status==='made'?'selected':''}>Made it</option>
+      </select>
+    </div>
+    <div class="field row3">
+      <div><label>Servings</label><input type="text" id="f-servings" value="${escapeHtml(d.servings)}"></div>
+      <div><label>Prep time</label><input type="text" id="f-prep" value="${escapeHtml(d.prepTime)}" placeholder="15 min"></div>
+      <div><label>Cook time</label><input type="text" id="f-cook" value="${escapeHtml(d.cookTime)}" placeholder="30 min"></div>
+    </div>
+    <div class="field">
+      <label>Ingredients</label>
+      <textarea id="f-ingredients" placeholder="One per line, e.g.&#10;200g spaghetti&#10;2 lemons, zested and juiced">${escapeHtml((d.ingredients||[]).join('\n'))}</textarea>
+      <div class="field-hint">One ingredient per line.</div>
+    </div>
+    <div class="field">
+      <label>Instructions</label>
+      <textarea id="f-instructions" placeholder="One step per line">${escapeHtml((d.instructions||[]).join('\n'))}</textarea>
+      <div class="field-hint">One step per line — numbered automatically.</div>
+    </div>
+    <div class="field">
+      <label>Notes</label>
+      <textarea id="f-notes" placeholder="Substitutions, tweaks for next time…">${escapeHtml(d.notes)}</textarea>
+    </div>
+    <div class="field">
+      <label>Source</label>
+      <textarea id="f-sources" placeholder="One per line — a link, a book, a person's name">${escapeHtml((d.sources||[]).join('\n'))}</textarea>
+    </div>
+  `;
+  renderPhotoEditGrid(d.photos, document.getElementById('photo-grid'));
+  document.getElementById('btn-add-photo').onclick = ()=> document.getElementById('photo-input').click();
+  document.getElementById('photo-input').onchange = (e)=>{
+    const files = Array.from(e.target.files || []);
+    e.target.value = '';
+    if(files.length) uploadPhotosSequentially(files, d.photos, document.getElementById('photo-grid'));
+  };
+
+  document.getElementById('panel-footer').style.display = 'flex';
+  document.getElementById('btn-delete').style.display = isNewRecipe ? 'none' : 'inline-flex';
+  updateSaveAvailability();
+}
+
+function collectFormIntoDetail(){
+  const d = currentDetail;
+  d.title = document.getElementById('f-title').value.trim();
+  d.tags = tagsToArray(document.getElementById('f-tags').value);
+  d.status = document.getElementById('f-status').value;
+  d.servings = document.getElementById('f-servings').value.trim();
+  d.prepTime = document.getElementById('f-prep').value.trim();
+  d.cookTime = document.getElementById('f-cook').value.trim();
+  d.ingredients = linesToArray(document.getElementById('f-ingredients').value);
+  d.instructions = linesToArray(document.getElementById('f-instructions').value);
+  d.notes = document.getElementById('f-notes').value.trim();
+  d.sources = linesToArray(document.getElementById('f-sources').value);
+  d.updatedAt = new Date().toISOString();
+  if(!d.addedBy) d.addedBy = editorName || '';
+  return d;
+}
+
+document.getElementById('btn-save').onclick = async ()=>{
+  if(!currentDetail) return;
+  const d = collectFormIntoDetail();
+  if(!d.title){ alert('Give the recipe a title before saving.'); return; }
+  const btn = document.getElementById('btn-save');
+  const hint = document.getElementById('save-hint');
+  btn.disabled = true;
+  document.getElementById('btn-delete').disabled = true;
+  hint.textContent = 'Saving…';
+  try{
+    const folderId = await ensureRecipesFolder();
+    const blob = new Blob([JSON.stringify(d)], { type:'application/json' });
+    if(!d.detailFileId){
+      const fileId = await driveCreateFile(blob, `recipe-${d.id}.json`, folderId, 'application/json');
+      await driveSetPublic(fileId);
+      d.detailFileId = fileId;
+    } else {
+      await driveUpdateFileContent(d.detailFileId, blob, 'application/json');
+    }
+    const idx = recipes.findIndex(r=>r.id===d.id);
+    const slim = slimForSummary(d);
+    if(idx === -1) recipes.push(slim); else recipes[idx] = slim;
+    await saveSummary();
+    hint.textContent = '';
+    showToast('Saved');
+    closePanel();
+    renderList();
+  }catch(e){
+    hint.textContent = '';
+    alert("Couldn't save — check your connection and try again. Nothing has been lost, your edits are still in this panel.");
+  }finally{
+    btn.disabled = currentPhotosUploading > 0;
+    document.getElementById('btn-delete').disabled = false;
+  }
+};
+
+document.getElementById('btn-delete').onclick = async ()=>{
+  if(!currentDetail || isNewRecipe) return;
+  if(!confirm(`Delete "${currentDetail.title}"? This can't be undone.`)) return;
+  const btn = document.getElementById('btn-delete');
+  const hint = document.getElementById('save-hint');
+  btn.disabled = true;
+  document.getElementById('btn-save').disabled = true;
+  hint.textContent = 'Deleting…';
+  try{
+    const d = currentDetail;
+    if(d.detailFileId) await driveDeleteFile(d.detailFileId);
+    for(const p of (d.photos||[])){
+      await driveDeleteFile(p.fileId);
+      await new Promise(r=>setTimeout(r, 150)); // throttle deletes too
+    }
+    recipes = recipes.filter(r=>r.id!==d.id);
+    await saveSummary();
+    hint.textContent = '';
+    showToast('Deleted');
+    closePanel();
+    renderList();
+  }catch(e){
+    hint.textContent = '';
+    alert("Couldn't delete — check your connection and try again.");
+  }finally{
+    btn.disabled = false;
+    document.getElementById('btn-save').disabled = currentPhotosUploading > 0;
+  }
+};
+
+/* ==================== Filter wiring ==================== */
+document.getElementById('search-input').addEventListener('input', (e)=>{
+  searchQuery = e.target.value;
+  renderList();
+});
+document.querySelectorAll('#status-filter button').forEach(btn=>{
+  btn.onclick = ()=>{
+    statusFilter = btn.dataset.val;
+    document.querySelectorAll('#status-filter button').forEach(b=>b.classList.toggle('active', b===btn));
+    renderList();
+  };
+});
+
+/* ==================== Service worker ==================== */
+if('serviceWorker' in navigator){
+  window.addEventListener('load', ()=>{
+    navigator.serviceWorker.register('sw.js').catch(()=>{});
+  });
+}
+
+/* ==================== Init ==================== */
+(async function init(){
+  initDriveAuth();
+  await loadSummary();
+  renderList();
+  attemptSilentSignIn();
+})();
+</script>
+</body>
+</html>
