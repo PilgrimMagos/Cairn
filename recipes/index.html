@@ -245,10 +245,56 @@
   }
   .toast.show{opacity:1;}
 
+  /* ---------- Ingredients: rows, matching, pantry ---------- */
+  .badge{
+    font-family:var(--font-mono); font-size:10px; padding:2px 7px; border-radius:999px; display:inline-block;
+  }
+  .badge.unmatched{background:rgba(181,72,47,.18); color:#E8A390;}
+  .badge.auto{background:rgba(201,138,43,.22); color:var(--mustard-soft);}
+  .badge.confirmed{background:rgba(107,143,94,.25); color:#9FC28C;}
+  .paste-row{display:flex; gap:8px; align-items:flex-start; margin-bottom:12px;}
+  .paste-row textarea{flex:1; min-height:64px;}
+  .ingredient-row{border:1px solid var(--line-on-dark); border-radius:10px; padding:10px; margin-bottom:8px;}
+  .ingredient-row-line1{display:grid; grid-template-columns:64px 84px 1fr 30px; gap:6px; margin-bottom:6px;}
+  .ingredient-row-line2{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px;}
+  .ingredient-row select, .ingredient-row input{
+    background:var(--bg-soft); border:1px solid var(--line-on-dark); border-radius:8px;
+    padding:7px 8px; color:var(--cream); font-family:var(--font-body); font-size:13.5px; width:100%;
+  }
+  .ingredient-row .match-select{flex:1; min-width:140px; width:auto;}
+  .ingredient-row .row-remove{
+    background:transparent; border:none; color:var(--tomato); font-size:18px; cursor:pointer; padding:0; line-height:1;
+  }
+  .ingredient-cost{font-family:var(--font-mono); color:var(--cream-soft); font-size:11.5px;}
+  .add-to-pantry-link{
+    background:transparent; border:none; color:var(--mustard-soft); font-size:12px; cursor:pointer;
+    text-decoration:underline; padding:0;
+  }
+  .mini-pantry-form{
+    display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-top:8px; padding-top:8px;
+    border-top:1px dashed var(--line-on-dark);
+  }
+  .mini-pantry-form input, .mini-pantry-form select{font-size:12.5px; padding:6px 7px;}
+  .totals-line{font-family:var(--font-mono); font-size:12.5px; color:var(--mustard-soft); margin:6px 0 16px;}
+  .pantry-item-row{
+    display:grid; grid-template-columns:1.3fr 1.1fr 66px 84px 84px 84px 26px; gap:6px;
+    align-items:center; margin-bottom:8px;
+  }
+  .pantry-item-row input, .pantry-item-row select{font-size:12.5px; padding:6px 7px;}
+  .pantry-header-row{
+    display:grid; grid-template-columns:1.3fr 1.1fr 66px 84px 84px 84px 26px; gap:6px;
+    font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em;
+    color:var(--cream-soft); margin-bottom:8px;
+  }
+
   @media (max-width:520px){
     .row3{grid-template-columns:1fr;}
     header{padding:14px 16px;}
     .toolbar, .list-wrap{padding-left:14px; padding-right:14px;}
+    .ingredient-row-line1{grid-template-columns:56px 74px 1fr 26px;}
+    .pantry-item-row, .pantry-header-row{grid-template-columns:1fr; gap:4px;}
+    .pantry-header-row{display:none;}
+    .pantry-item-row{border:1px solid var(--line-on-dark); border-radius:8px; padding:8px; margin-bottom:10px;}
   }
 </style>
 </head>
@@ -261,6 +307,7 @@
   </div>
   <div class="header-actions">
     <button class="btn editor-only" id="btn-add" style="display:none;">+ New recipe</button>
+    <button class="btn small editor-only" id="btn-pantry" style="display:none;">Pantry</button>
     <button class="btn small" id="btn-refresh-app" title="Clear cache and reload the latest version">Refresh app</button>
     <button class="btn" id="btn-signin">Sign in</button>
     <button class="btn small editor-only" id="btn-signout" style="display:none;">Sign out</button>
@@ -307,6 +354,33 @@
   </div>
 </div>
 
+<div class="overlay" id="pantry-overlay">
+  <div class="panel">
+    <div class="panel-header">
+      <div>
+        <div class="eyebrow">Shared pantry</div>
+      </div>
+      <button class="icon-btn" id="btn-pantry-close" aria-label="Close">&times;</button>
+    </div>
+    <div class="panel-body" id="pantry-body">
+      <p class="field-hint" style="margin-bottom:16px;">
+        Prices and calories here get matched automatically against ingredients as you add them to recipes.
+        Cost/kcal are <em>per unit</em> (per gram, per ml, or per each) — a density is only needed if a recipe
+        might give this ingredient in the "other" measurement type (e.g. priced per ml, but a recipe calls for grams).
+      </p>
+      <div class="pantry-header-row">
+        <span>Name</span><span>Aliases</span><span>Unit</span><span>Cost/unit</span><span>Kcal/unit</span><span>Density (g/ml)</span><span></span>
+      </div>
+      <div id="pantry-list"></div>
+      <button class="btn small" id="btn-pantry-add-row" type="button">+ Add pantry item</button>
+    </div>
+    <div class="panel-footer">
+      <span class="save-hint" id="pantry-save-hint"></span>
+      <button class="btn primary" id="btn-pantry-save">Save pantry</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js"></script>
@@ -318,8 +392,10 @@ const DRIVE_API_KEY = 'AIzaSyDcxsbE66fTwSM5YAmWizMa10y64aChHbg';
 const DRIVE_SCOPES = 'https://www.googleapis.com/auth/drive';
 const FOLDER_NAME = 'Recipes';
 const SUMMARY_FILE_NAME = 'recipes-data.json';
+const PANTRY_FILE_NAME = 'recipes-pantry.json';
 // Baked in once bootstrapped for real — see bootstrapSharedStorage().
 let SUMMARY_FILE_ID = localStorage.getItem('recipes:summaryFileId') || '1R24QvQ8IHJjjTCaFNjq6UVhgo7XiMLUo';
+let PANTRY_FILE_ID = localStorage.getItem('recipes:pantryFileId') || '';
 let recipesFolderId = localStorage.getItem('recipes:folderId') || '';
 
 /* ==================== State ==================== */
@@ -335,6 +411,7 @@ let searchQuery = '';
 let currentDetail = null;  // full object of the recipe open in the panel
 let currentPhotosUploading = 0;
 let isNewRecipe = false;
+let pantry = [];           // shared pantry items: {id, name, aliases[], unit, costPerUnit, kcalPerUnit, density}
 
 /* ==================== Small helpers ==================== */
 function genId(){ return Date.now().toString(36) + Math.random().toString(36).slice(2,8); }
@@ -349,6 +426,148 @@ function showToast(msg){
   t.textContent = msg; t.classList.add('show');
   clearTimeout(showToast._t);
   showToast._t = setTimeout(()=>t.classList.remove('show'), 2200);
+}
+
+/* ==================== Units, parsing, pantry matching ==================== */
+const WEIGHT_TO_G = { g:1, kg:1000, mg:0.001, oz:28.3495, lb:453.592 };
+const VOLUME_TO_ML = { ml:1, l:1000, tsp:4.92892, tbsp:14.7868, cup:236.588, fl_oz:29.5735 };
+const UNIT_LABELS = { g:'g', kg:'kg', mg:'mg', oz:'oz', lb:'lb', ml:'ml', l:'l', tsp:'tsp', tbsp:'tbsp', cup:'cup', fl_oz:'fl oz', each:'' };
+const UNIT_ALIASES = {
+  g:['g','gram','grams','gr'], kg:['kg','kilogram','kilograms'], mg:['mg','milligram','milligrams'],
+  oz:['oz','ounce','ounces'], lb:['lb','lbs','pound','pounds'],
+  ml:['ml','milliliter','milliliters','millilitre','millilitres'], l:['l','liter','liters','litre','litres'],
+  tsp:['tsp','teaspoon','teaspoons'], tbsp:['tbsp','tablespoon','tablespoons','tbs'],
+  cup:['cup','cups'], fl_oz:['fl oz','fl.oz','fluid ounce','fluid ounces','floz'],
+};
+const UNIT_WORD_TO_CODE = (()=>{
+  const m = {};
+  Object.entries(UNIT_ALIASES).forEach(([code, words])=> words.forEach(w=> m[w]=code));
+  return m;
+})();
+const PREP_STOPWORDS = new Set([
+  'diced','chopped','sliced','minced','grated','crushed','fresh','dried','frozen','cooked','raw',
+  'skinless','boneless','large','small','medium','ripe','of','the','a','an','to','taste','for',
+  'garnish','optional','plus','extra','divided','room','temperature','peeled','halved','quartered',
+  'trimmed','rinsed','drained','and'
+]);
+
+function unitLabel(u){ return UNIT_LABELS[u] != null ? UNIT_LABELS[u] : (u||''); }
+
+function parseQuantityString(str){
+  if(str == null) return null;
+  const s = String(str).trim();
+  if(!s) return null;
+  const mixed = s.match(/^(\d+)\s+(\d+)\/(\d+)$/);
+  if(mixed) return parseInt(mixed[1],10) + (parseInt(mixed[2],10)/parseInt(mixed[3],10));
+  const frac = s.match(/^(\d+)\/(\d+)$/);
+  if(frac) return parseInt(frac[1],10)/parseInt(frac[2],10);
+  const num = parseFloat(s);
+  return isNaN(num) ? null : num;
+}
+
+// Basic cleanup only — bullet/number-stripping gets smarter once the
+// dedicated paste-cleanup pass is built; this just strips obvious bullets.
+function stripBullet(line){
+  return line.replace(/^[\s]*[-*•▢□]\s*/, '').trim();
+}
+
+function parseIngredientLine(rawLine){
+  const cleaned = stripBullet(rawLine);
+  const qtyMatch = cleaned.match(/^(\d+\s+\d+\/\d+|\d+\/\d+|\d*\.\d+|\d+)\s*/);
+  let rest = cleaned;
+  let quantity = '';
+  if(qtyMatch){
+    quantity = qtyMatch[1];
+    rest = cleaned.slice(qtyMatch[0].length).trim();
+  }
+  let unit = null;
+  // check two-word units first (e.g. "fl oz"), then one word
+  const twoWord = rest.match(/^([a-zA-Z]+\.?\s+[a-zA-Z]+\.?)\s+(.*)$/);
+  if(twoWord && UNIT_WORD_TO_CODE[twoWord[1].toLowerCase().replace(/\./g,'')]){
+    unit = UNIT_WORD_TO_CODE[twoWord[1].toLowerCase().replace(/\./g,'')];
+    rest = twoWord[2].trim();
+  } else {
+    const oneWord = rest.match(/^([a-zA-Z]+)\.?\s+(.*)$/);
+    if(oneWord && UNIT_WORD_TO_CODE[oneWord[1].toLowerCase()]){
+      unit = UNIT_WORD_TO_CODE[oneWord[1].toLowerCase()];
+      rest = oneWord[2].trim();
+    }
+  }
+  rest = rest.replace(/^[,-]\s*/, '').trim();
+  return { quantity, unit, name: rest || cleaned };
+}
+
+function normalizeWords(str){
+  return (str||'').toLowerCase().replace(/[^a-z0-9\s]/g,' ').split(/\s+/)
+    .filter(w=>w && !PREP_STOPWORDS.has(w));
+}
+
+function matchIngredientToPantry(name, pantryList){
+  const nameWords = normalizeWords(name);
+  if(!nameWords.length || !pantryList.length) return { pantryId:null, score:0 };
+  let best = null, bestScore = 0;
+  pantryList.forEach(p=>{
+    const candidates = [p.name, ...(p.aliases||[])];
+    candidates.forEach(c=>{
+      const cWords = normalizeWords(c);
+      if(!cWords.length) return;
+      const overlap = cWords.filter(w=>nameWords.includes(w)).length;
+      const score = overlap / Math.max(cWords.length, nameWords.length);
+      if(score > bestScore){ bestScore = score; best = p; }
+    });
+  });
+  if(!best || bestScore === 0) return { pantryId:null, score:0 };
+  return { pantryId: best.id, score: bestScore };
+}
+
+function toGrams(qty, unit){ return WEIGHT_TO_G[unit] != null ? qty*WEIGHT_TO_G[unit] : null; }
+function toMl(qty, unit){ return VOLUME_TO_ML[unit] != null ? qty*VOLUME_TO_ML[unit] : null; }
+
+function computeCostAndKcal(row, pantryItem){
+  if(!pantryItem) return { cost:null, kcal:null };
+  const qty = parseQuantityString(row.quantity);
+  if(qty == null) return { cost:null, kcal:null };
+  const unit = row.unit;
+  let amount = null;
+  if(pantryItem.unit === 'each'){
+    if(!unit || unit === 'each') amount = qty;
+  } else if(pantryItem.unit === 'g'){
+    const g = toGrams(qty, unit);
+    if(g != null) amount = g;
+    else { const ml = toMl(qty, unit); if(ml != null && pantryItem.density) amount = ml * pantryItem.density; }
+  } else if(pantryItem.unit === 'ml'){
+    const ml = toMl(qty, unit);
+    if(ml != null) amount = ml;
+    else { const g = toGrams(qty, unit); if(g != null && pantryItem.density) amount = g / pantryItem.density; }
+  }
+  if(amount == null) return { cost:null, kcal:null };
+  const cost = pantryItem.costPerUnit != null ? amount * pantryItem.costPerUnit : null;
+  const kcal = pantryItem.kcalPerUnit != null ? amount * pantryItem.kcalPerUnit : null;
+  return { cost, kcal };
+}
+
+function recomputeIngredientRow(row){
+  const item = pantry.find(p=>p.id === row.pantryId) || null;
+  const { cost, kcal } = computeCostAndKcal(row, item);
+  row.cost = cost; row.kcal = kcal;
+  return row;
+}
+
+// Old saved recipes stored ingredients as plain text lines — upgrade them
+// in place the first time they're loaded, so nothing needs a migration pass.
+function normalizeIngredients(d){
+  d.ingredients = (d.ingredients||[]).map(ing=>{
+    if(typeof ing === 'string'){
+      const parsed = parseIngredientLine(ing);
+      const m = matchIngredientToPantry(parsed.name, pantry);
+      const row = { id:genId(), rawText:ing, quantity:parsed.quantity, unit:parsed.unit, name:parsed.name,
+        pantryId:m.pantryId, status: m.pantryId ? 'auto' : 'unmatched', matchScore:m.score, cost:null, kcal:null };
+      recomputeIngredientRow(row);
+      return row;
+    }
+    return ing;
+  });
+  return d;
 }
 
 /* ==================== Drive auth ==================== */
@@ -416,6 +635,7 @@ function applyEditorUI(){
   document.getElementById('btn-signin').textContent = isEditor ? (editorName || 'Signed in ✓') : 'Sign in';
   document.getElementById('btn-signin').classList.toggle('owner', isEditor);
   document.getElementById('btn-add').style.display = isEditor ? 'inline-flex' : 'none';
+  document.getElementById('btn-pantry').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-signout').style.display = isEditor ? 'inline-flex' : 'none';
 }
 
@@ -586,6 +806,41 @@ async function saveSummary(){
   }
 }
 
+async function loadPantry(){
+  if(!PANTRY_FILE_ID){ pantry = []; return; }
+  try{
+    const res = await fetch(publicFileUrl(PANTRY_FILE_ID));
+    if(!res.ok) throw new Error('status ' + res.status);
+    const data = await res.json();
+    pantry = data.pantry || [];
+  }catch(e){
+    pantry = [];
+  }
+}
+
+async function ensurePantryFile(){
+  if(PANTRY_FILE_ID) return PANTRY_FILE_ID;
+  const folderId = await ensureRecipesFolder();
+  let file = await driveFindFile(`name='${PANTRY_FILE_NAME}' and '${folderId}' in parents and trashed=false`);
+  let fileId;
+  if(file){
+    fileId = file.id;
+  } else {
+    const blob = new Blob([JSON.stringify({ pantry: [] })], { type:'application/json' });
+    fileId = await driveCreateFile(blob, PANTRY_FILE_NAME, folderId, 'application/json');
+    await driveSetPublic(fileId);
+  }
+  PANTRY_FILE_ID = fileId;
+  localStorage.setItem('recipes:pantryFileId', fileId);
+  return fileId;
+}
+
+async function savePantry(){
+  const fileId = await ensurePantryFile();
+  const blob = new Blob([JSON.stringify({ pantry })], { type:'application/json' });
+  await driveUpdateFileContent(fileId, blob, 'application/json');
+}
+
 async function loadDetail(fileId){
   const res = await fetch(publicFileUrl(fileId));
   if(!res.ok) throw new Error('status ' + res.status);
@@ -599,8 +854,6 @@ function slimForSummary(d){
     title: d.title,
     tags: d.tags,
     status: d.status,
-    prepTime: d.prepTime,
-    cookTime: d.cookTime,
     servings: d.servings,
     addedBy: d.addedBy,
     thumbFileId: (d.photos && d.photos[0]) ? d.photos[0].fileId : null,
@@ -751,8 +1004,6 @@ function renderList(){
         <p class="card-title">${escapeHtml(r.title || 'Untitled recipe')}</p>
         <div class="card-meta">
           <span><span class="status-dot${r.status==='made'?' made':''}"></span> ${r.status==='made'?'Made it':'Want to try'}</span>
-          ${r.prepTime ? `<span>Prep ${escapeHtml(r.prepTime)}</span>`:''}
-          ${r.cookTime ? `<span>Cook ${escapeHtml(r.cookTime)}</span>`:''}
         </div>
         ${(r.tags && r.tags.length) ? `<div class="card-tags">${r.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
       </div>
@@ -801,7 +1052,9 @@ async function openDetail(id){
   document.getElementById('panel-body').innerHTML = '';
   document.getElementById('panel-footer').style.display = 'none';
   try{
+    if(isEditor) await loadPantry(); // fresh pantry for matching/cost preview while editing
     const detail = await loadDetail(summary.detailFileId);
+    normalizeIngredients(detail);
     currentDetail = detail;
     isNewRecipe = false;
     document.getElementById('panel-eyebrow').textContent = detail.status === 'made' ? 'Made it' : 'Want to try';
@@ -811,10 +1064,11 @@ async function openDetail(id){
   }
 }
 
-function openNewRecipe(){
+async function openNewRecipe(){
+  await loadPantry();
   currentDetail = {
     id: genId(), detailFileId: null, title: '', tags: [], status: 'want',
-    servings: '', prepTime: '', cookTime: '', ingredients: [], instructions: [],
+    servings: '', ingredients: [], instructions: [],
     notes: '', sources: [], addedBy: editorName || '', photos: [],
     createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
   };
@@ -825,20 +1079,35 @@ function openNewRecipe(){
 }
 document.getElementById('btn-add').onclick = openNewRecipe;
 
+function formatIngredientLine(row){
+  const parts = [row.quantity, unitLabel(row.unit), row.name].filter(Boolean);
+  return parts.join(' ').replace(/\s+/g,' ').trim();
+}
+
+function ingredientTotals(ingredients){
+  let cost = 0, kcal = 0, priced = 0;
+  (ingredients||[]).forEach(row=>{
+    if(row.cost != null){ cost += row.cost; priced++; }
+    if(row.kcal != null){ kcal += row.kcal; }
+  });
+  return { cost, kcal, priced, total: (ingredients||[]).length };
+}
+
 function renderReadOnly(d){
   const body = document.getElementById('panel-body');
   const photos = d.photos || [];
+  const totals = ingredientTotals(d.ingredients);
   body.innerHTML = `
     ${photos.length ? `<div class="photo-strip">${photos.map(p=>`<a href="${publicFileUrl(p.fileId)}" target="_blank" rel="noopener"><img src="${publicFileUrl(p.fileId)}" alt=""></a>`).join('')}</div>` : ''}
     <h2 class="detail-title">${escapeHtml(d.title)}</h2>
     <div class="detail-meta">
       ${d.servings ? `<span>Serves ${escapeHtml(d.servings)}</span>`:''}
-      ${d.prepTime ? `<span>Prep ${escapeHtml(d.prepTime)}</span>`:''}
-      ${d.cookTime ? `<span>Cook ${escapeHtml(d.cookTime)}</span>`:''}
       ${d.addedBy ? `<span>Added by ${escapeHtml(d.addedBy)}</span>`:''}
     </div>
     ${(d.tags && d.tags.length) ? `<div class="detail-tags">${d.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}
-    ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section"><h3>Ingredients</h3><ul>${d.ingredients.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ul></div>`:''}
+    ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section"><h3>Ingredients</h3><ul>${d.ingredients.map(row=>`<li>${escapeHtml(formatIngredientLine(row))}</li>`).join('')}</ul>
+      ${totals.priced > 0 ? `<div class="totals-line">~$${totals.cost.toFixed(2)}${totals.kcal ? ' · ' + Math.round(totals.kcal) + ' kcal' : ''} (${totals.priced} of ${totals.total} priced)</div>` : ''}
+    </div>`:''}
     ${(d.instructions && d.instructions.length) ? `<div class="detail-section"><h3>Instructions</h3><ol>${d.instructions.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ol></div>`:''}
     ${d.notes ? `<div class="detail-section"><h3>Notes</h3><p>${escapeHtml(d.notes)}</p></div>`:''}
     ${(d.sources && d.sources.length) ? `<div class="detail-section"><h3>Source</h3><p>${d.sources.map(s=>looksLikeUrl(s)?`<a href="${escapeHtml(s)}" target="_blank" rel="noopener">${escapeHtml(s)}</a>`:escapeHtml(s)).join('<br>')}</p></div>`:''}
@@ -871,15 +1140,19 @@ function renderEditForm(d){
         <option value="made" ${d.status==='made'?'selected':''}>Made it</option>
       </select>
     </div>
-    <div class="field row3">
-      <div><label>Servings</label><input type="text" id="f-servings" value="${escapeHtml(d.servings)}"></div>
-      <div><label>Prep time</label><input type="text" id="f-prep" value="${escapeHtml(d.prepTime)}" placeholder="15 min"></div>
-      <div><label>Cook time</label><input type="text" id="f-cook" value="${escapeHtml(d.cookTime)}" placeholder="30 min"></div>
+    <div class="field">
+      <label>Servings</label>
+      <input type="text" id="f-servings" value="${escapeHtml(d.servings)}" style="max-width:160px;">
     </div>
     <div class="field">
       <label>Ingredients</label>
-      <textarea id="f-ingredients" placeholder="One per line, e.g.&#10;200g spaghetti&#10;2 lemons, zested and juiced">${escapeHtml((d.ingredients||[]).join('\n'))}</textarea>
-      <div class="field-hint">One ingredient per line.</div>
+      <div class="paste-row">
+        <textarea id="f-ingredients-paste" placeholder="Paste ingredients here, one per line, then click Add — they'll be parsed and matched against the pantry"></textarea>
+        <button type="button" class="btn small" id="btn-parse-ingredients">Add</button>
+      </div>
+      <div id="ingredient-rows"></div>
+      <button type="button" class="btn small" id="btn-add-ingredient-row">+ Add ingredient</button>
+      <div class="totals-line" id="ingredient-totals"></div>
     </div>
     <div class="field">
       <label>Instructions</label>
@@ -903,9 +1176,157 @@ function renderEditForm(d){
     if(files.length) uploadPhotosSequentially(files, d.photos, document.getElementById('photo-grid'));
   };
 
+  renderIngredientRows(d);
+  document.getElementById('btn-parse-ingredients').onclick = ()=>{
+    const box = document.getElementById('f-ingredients-paste');
+    const lines = linesToArray(box.value);
+    lines.forEach(line=>{
+      const parsed = parseIngredientLine(line);
+      const m = matchIngredientToPantry(parsed.name, pantry);
+      const row = { id:genId(), rawText:line, quantity:parsed.quantity, unit:parsed.unit, name:parsed.name,
+        pantryId:m.pantryId, status: m.pantryId ? 'auto' : 'unmatched', matchScore:m.score, cost:null, kcal:null };
+      recomputeIngredientRow(row);
+      d.ingredients.push(row);
+    });
+    box.value = '';
+    renderIngredientRows(d);
+  };
+  document.getElementById('btn-add-ingredient-row').onclick = ()=>{
+    d.ingredients.push({ id:genId(), rawText:'', quantity:'', unit:null, name:'', pantryId:null, status:'unmatched', matchScore:0, cost:null, kcal:null });
+    renderIngredientRows(d);
+  };
+
   document.getElementById('panel-footer').style.display = 'flex';
   document.getElementById('btn-delete').style.display = isNewRecipe ? 'none' : 'inline-flex';
   updateSaveAvailability();
+}
+
+function pantryOptionsHtml(selectedId){
+  const opts = [`<option value="">— no match / manual —</option>`];
+  pantry.slice().sort((a,b)=>a.name.localeCompare(b.name)).forEach(p=>{
+    opts.push(`<option value="${escapeHtml(p.id)}"${p.id===selectedId?' selected':''}>${escapeHtml(p.name)}</option>`);
+  });
+  return opts.join('');
+}
+
+function unitSelectHtml(selected){
+  const units = ['', 'g','kg','mg','oz','lb','ml','l','tsp','tbsp','cup','fl_oz','each'];
+  return units.map(u=>{
+    const label = u === '' ? 'unit' : (u==='each' ? 'count' : unitLabel(u));
+    return `<option value="${u}"${(selected||'')===u?' selected':''}>${label}</option>`;
+  }).join('');
+}
+
+function renderIngredientRows(d){
+  const wrap = document.getElementById('ingredient-rows');
+  wrap.innerHTML = (d.ingredients||[]).map((row, idx)=>{
+    const badgeClass = row.status === 'confirmed' ? 'confirmed' : (row.status === 'auto' ? 'auto' : 'unmatched');
+    const badgeText = row.status === 'confirmed' ? 'confirmed'
+      : row.status === 'auto' ? `match ${Math.round((row.matchScore||0)*100)}%`
+      : 'no match';
+    const costText = row.cost != null ? `$${row.cost.toFixed(2)}${row.kcal!=null ? ' · ' + Math.round(row.kcal) + ' kcal' : ''}` : '';
+    return `
+      <div class="ingredient-row" data-idx="${idx}">
+        <div class="ingredient-row-line1">
+          <input type="text" class="ing-qty" value="${escapeHtml(row.quantity)}" placeholder="qty">
+          <select class="ing-unit">${unitSelectHtml(row.unit)}</select>
+          <input type="text" class="ing-name" value="${escapeHtml(row.name)}" placeholder="ingredient name">
+          <button type="button" class="row-remove" title="Remove">&times;</button>
+        </div>
+        <div class="ingredient-row-line2">
+          <select class="match-select ing-pantry">${pantryOptionsHtml(row.pantryId)}</select>
+          <span class="badge ${badgeClass}">${badgeText}</span>
+          <span class="ingredient-cost">${costText}</span>
+          ${!row.pantryId ? `<button type="button" class="add-to-pantry-link">+ Add "${escapeHtml(row.name||'this')}" to pantry</button>` : ''}
+        </div>
+        <div class="mini-pantry-form-slot"></div>
+      </div>
+    `;
+  }).join('');
+
+  wrap.querySelectorAll('.ingredient-row').forEach(rowEl=>{
+    const idx = parseInt(rowEl.dataset.idx, 10);
+    const row = d.ingredients[idx];
+
+    rowEl.querySelector('.ing-qty').oninput = (e)=>{ row.quantity = e.target.value; recomputeIngredientRow(row); updateRowDisplay(rowEl, row); updateIngredientTotals(d); };
+    rowEl.querySelector('.ing-unit').onchange = (e)=>{ row.unit = e.target.value || null; recomputeIngredientRow(row); updateRowDisplay(rowEl, row); updateIngredientTotals(d); };
+    rowEl.querySelector('.ing-name').oninput = (e)=>{ row.name = e.target.value; };
+    rowEl.querySelector('.ing-pantry').onchange = (e)=>{
+      row.pantryId = e.target.value || null;
+      row.status = row.pantryId ? 'confirmed' : 'unmatched';
+      recomputeIngredientRow(row);
+      renderIngredientRows(d);
+      updateIngredientTotals(d);
+    };
+    rowEl.querySelector('.row-remove').onclick = ()=>{
+      d.ingredients.splice(idx, 1);
+      renderIngredientRows(d);
+      updateIngredientTotals(d);
+    };
+    const addLink = rowEl.querySelector('.add-to-pantry-link');
+    if(addLink){
+      addLink.onclick = ()=> openMiniPantryForm(rowEl, row, d);
+    }
+  });
+  updateIngredientTotals(d);
+}
+
+function updateRowDisplay(rowEl, row){
+  const badgeClass = row.status === 'confirmed' ? 'confirmed' : (row.status === 'auto' ? 'auto' : 'unmatched');
+  const badgeText = row.status === 'confirmed' ? 'confirmed'
+    : row.status === 'auto' ? `match ${Math.round((row.matchScore||0)*100)}%`
+    : 'no match';
+  const badge = rowEl.querySelector('.badge');
+  badge.className = `badge ${badgeClass}`;
+  badge.textContent = badgeText;
+  rowEl.querySelector('.ingredient-cost').textContent = row.cost != null
+    ? `$${row.cost.toFixed(2)}${row.kcal!=null ? ' · ' + Math.round(row.kcal) + ' kcal' : ''}` : '';
+}
+
+function updateIngredientTotals(d){
+  const el = document.getElementById('ingredient-totals');
+  if(!el) return;
+  const t = ingredientTotals(d.ingredients);
+  el.textContent = t.total ? `~$${t.cost.toFixed(2)}${t.kcal ? ' · ' + Math.round(t.kcal) + ' kcal' : ''} (${t.priced} of ${t.total} priced)` : '';
+}
+
+function openMiniPantryForm(rowEl, row, d){
+  const slot = rowEl.querySelector('.mini-pantry-form-slot');
+  if(slot.innerHTML){ slot.innerHTML = ''; return; } // toggle closed if already open
+  slot.innerHTML = `
+    <div class="mini-pantry-form">
+      <input type="text" class="mp-name" placeholder="Pantry name" value="${escapeHtml(row.name)}">
+      <select class="mp-unit">
+        <option value="g">priced per g</option>
+        <option value="ml">priced per ml</option>
+        <option value="each">priced per each</option>
+      </select>
+      <input type="text" class="mp-cost" placeholder="cost/unit">
+      <input type="text" class="mp-kcal" placeholder="kcal/unit">
+    </div>
+    <button type="button" class="btn small" style="margin-top:6px;" id="btn-mp-save-${row.id}">Save to pantry</button>
+  `;
+  slot.querySelector(`#btn-mp-save-${row.id}`).onclick = async ()=>{
+    const name = slot.querySelector('.mp-name').value.trim();
+    const unit = slot.querySelector('.mp-unit').value;
+    const costPerUnit = parseFloat(slot.querySelector('.mp-cost').value) || 0;
+    const kcalPerUnit = parseFloat(slot.querySelector('.mp-kcal').value) || 0;
+    if(!name){ alert('Give the pantry item a name.'); return; }
+    const item = { id: genId(), name, aliases: [], unit, costPerUnit, kcalPerUnit, density: null };
+    pantry.push(item);
+    try{
+      await savePantry();
+      row.pantryId = item.id;
+      row.status = 'confirmed';
+      recomputeIngredientRow(row);
+      renderIngredientRows(d);
+      updateIngredientTotals(d);
+      showToast('Added to pantry');
+    }catch(e){
+      pantry.pop();
+      alert("Couldn't save to the shared pantry — check your connection and try again.");
+    }
+  };
 }
 
 function collectFormIntoDetail(){
@@ -914,9 +1335,8 @@ function collectFormIntoDetail(){
   d.tags = tagsToArray(document.getElementById('f-tags').value);
   d.status = document.getElementById('f-status').value;
   d.servings = document.getElementById('f-servings').value.trim();
-  d.prepTime = document.getElementById('f-prep').value.trim();
-  d.cookTime = document.getElementById('f-cook').value.trim();
-  d.ingredients = linesToArray(document.getElementById('f-ingredients').value);
+  // d.ingredients is kept live-updated by the ingredient row editor, not read from a textarea.
+  d.ingredients = (d.ingredients||[]).filter(row => row.name && row.name.trim());
   d.instructions = linesToArray(document.getElementById('f-instructions').value);
   d.notes = document.getElementById('f-notes').value.trim();
   d.sources = linesToArray(document.getElementById('f-sources').value);
@@ -988,6 +1408,77 @@ document.getElementById('btn-delete').onclick = async ()=>{
   }finally{
     btn.disabled = false;
     document.getElementById('btn-save').disabled = currentPhotosUploading > 0;
+  }
+};
+
+/* ==================== Pantry panel ==================== */
+document.getElementById('btn-pantry').onclick = async ()=>{
+  await loadPantry();
+  document.getElementById('pantry-overlay').classList.add('open');
+  renderPantryList();
+};
+document.getElementById('btn-pantry-close').onclick = ()=>{
+  document.getElementById('pantry-overlay').classList.remove('open');
+};
+document.getElementById('pantry-overlay').addEventListener('click', (e)=>{
+  if(e.target.id === 'pantry-overlay') document.getElementById('pantry-overlay').classList.remove('open');
+});
+
+function renderPantryList(){
+  const list = document.getElementById('pantry-list');
+  list.innerHTML = pantry.map((p, idx)=> `
+    <div class="pantry-item-row" data-idx="${idx}">
+      <input type="text" class="p-name" value="${escapeHtml(p.name)}" placeholder="Name">
+      <input type="text" class="p-aliases" value="${escapeHtml((p.aliases||[]).join(', '))}" placeholder="aliases, comma sep">
+      <select class="p-unit">
+        <option value="g" ${p.unit==='g'?'selected':''}>per g</option>
+        <option value="ml" ${p.unit==='ml'?'selected':''}>per ml</option>
+        <option value="each" ${p.unit==='each'?'selected':''}>per each</option>
+      </select>
+      <input type="text" class="p-cost" value="${p.costPerUnit!=null?p.costPerUnit:''}" placeholder="cost">
+      <input type="text" class="p-kcal" value="${p.kcalPerUnit!=null?p.kcalPerUnit:''}" placeholder="kcal">
+      <input type="text" class="p-density" value="${p.density!=null?p.density:''}" placeholder="g/ml">
+      <button type="button" class="row-remove" title="Delete">&times;</button>
+    </div>
+  `).join('');
+
+  list.querySelectorAll('.pantry-item-row').forEach(rowEl=>{
+    const idx = parseInt(rowEl.dataset.idx, 10);
+    const item = pantry[idx];
+    rowEl.querySelector('.p-name').oninput = e=> item.name = e.target.value;
+    rowEl.querySelector('.p-aliases').oninput = e=> item.aliases = tagsToArray(e.target.value);
+    rowEl.querySelector('.p-unit').onchange = e=> item.unit = e.target.value;
+    rowEl.querySelector('.p-cost').oninput = e=> item.costPerUnit = parseFloat(e.target.value) || 0;
+    rowEl.querySelector('.p-kcal').oninput = e=> item.kcalPerUnit = parseFloat(e.target.value) || 0;
+    rowEl.querySelector('.p-density').oninput = e=> item.density = e.target.value ? parseFloat(e.target.value) : null;
+    rowEl.querySelector('.row-remove').onclick = ()=>{
+      if(!confirm(`Remove "${item.name}" from the pantry? Recipes already matched to it will just show as unmatched.`)) return;
+      pantry.splice(idx, 1);
+      renderPantryList();
+    };
+  });
+}
+
+document.getElementById('btn-pantry-add-row').onclick = ()=>{
+  pantry.push({ id:genId(), name:'', aliases:[], unit:'g', costPerUnit:0, kcalPerUnit:0, density:null });
+  renderPantryList();
+};
+
+document.getElementById('btn-pantry-save').onclick = async ()=>{
+  const btn = document.getElementById('btn-pantry-save');
+  const hint = document.getElementById('pantry-save-hint');
+  pantry = pantry.filter(p=>p.name && p.name.trim());
+  btn.disabled = true;
+  hint.textContent = 'Saving…';
+  try{
+    await savePantry();
+    hint.textContent = '';
+    showToast('Pantry saved');
+  }catch(e){
+    hint.textContent = '';
+    alert("Couldn't save the pantry — check your connection and try again. Nothing has been lost.");
+  }finally{
+    btn.disabled = false;
   }
 };
 
