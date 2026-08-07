@@ -68,7 +68,7 @@
     font-family:var(--font-display); font-style:italic; font-weight:600;
     font-size:26px; margin:0; color:var(--cream);
   }
-  .header-actions{display:flex; align-items:center; gap:8px;}
+  .header-actions{display:flex; align-items:center; gap:8px; flex-wrap:wrap; justify-content:flex-end;}
   .btn{
     font-family:var(--font-body); font-size:14px; font-weight:600;
     padding:9px 16px; border-radius:999px; border:1px solid var(--line-on-dark);
@@ -307,6 +307,8 @@
   </div>
   <div class="header-actions">
     <button class="btn editor-only" id="btn-add" style="display:none;">+ New recipe</button>
+    <button class="btn small editor-only" id="btn-import" style="display:none;">Import</button>
+    <input type="file" id="import-file-input" accept="application/json,.json" style="display:none;">
     <button class="btn small editor-only" id="btn-pantry" style="display:none;">Pantry</button>
     <button class="btn small" id="btn-refresh-app" title="Clear cache and reload the latest version">Refresh app</button>
     <button class="btn" id="btn-signin">Sign in</button>
@@ -570,6 +572,82 @@ function normalizeIngredients(d){
   return d;
 }
 
+// Runs pantry matching against any ingredient row that doesn't already have
+// a match — used after import, where rows arrive with pantryId already null.
+function matchUnresolvedIngredients(d){
+  (d.ingredients||[]).forEach(row=>{
+    if(!row.pantryId){
+      const m = matchIngredientToPantry(row.name, pantry);
+      row.pantryId = m.pantryId;
+      row.status = m.pantryId ? 'auto' : 'unmatched';
+      row.matchScore = m.score;
+      recomputeIngredientRow(row);
+    }
+  });
+  return d;
+}
+
+/* ==================== Import ==================== */
+function validateImportedRecipe(data){
+  if(!data || typeof data !== 'object') return 'Not a valid recipe file.';
+  if(!data.title || !String(data.title).trim()) return 'Missing a title.';
+  if(data.ingredients && !Array.isArray(data.ingredients)) return '"ingredients" should be a list.';
+  if(data.instructions && !Array.isArray(data.instructions)) return '"instructions" should be a list.';
+  return null;
+}
+
+async function handleImportFile(file){
+  let raw;
+  try{
+    raw = JSON.parse(await file.text());
+  }catch(e){
+    alert("That file isn't valid JSON — check it's the same file this app exported.");
+    return;
+  }
+  const problem = validateImportedRecipe(raw);
+  if(problem){
+    alert("Couldn't import this file: " + problem);
+    return;
+  }
+  await loadPantry();
+  const now = new Date().toISOString();
+  currentDetail = {
+    id: genId(),
+    detailFileId: null,
+    title: String(raw.title).trim(),
+    tags: Array.isArray(raw.tags) ? raw.tags : [],
+    status: raw.status === 'made' ? 'made' : 'want',
+    servings: raw.servings ? String(raw.servings) : '',
+    ingredients: Array.isArray(raw.ingredients) ? raw.ingredients.map(ing=>{
+      if(typeof ing === 'string') return ing; // normalizeIngredients() below will convert it
+      return {
+        id: genId(), rawText: ing.rawText || '', quantity: ing.quantity || '', unit: ing.unit || null,
+        name: ing.name || '', pantryId: null, status: 'unmatched', matchScore: 0, cost: null, kcal: null,
+      };
+    }) : [],
+    instructions: Array.isArray(raw.instructions) ? raw.instructions.map(String) : [],
+    notes: raw.notes || '',
+    sources: Array.isArray(raw.sources) ? raw.sources.map(String) : [],
+    addedBy: editorName || '',
+    photos: [],
+    createdAt: now, updatedAt: now,
+  };
+  normalizeIngredients(currentDetail);
+  matchUnresolvedIngredients(currentDetail);
+  isNewRecipe = true;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('panel-eyebrow').textContent = 'Imported recipe — review before saving';
+  renderEditForm(currentDetail);
+  showToast('Imported — review and Save to keep it');
+}
+
+document.getElementById('btn-import').onclick = ()=> document.getElementById('import-file-input').click();
+document.getElementById('import-file-input').onchange = (e)=>{
+  const file = e.target.files && e.target.files[0];
+  e.target.value = '';
+  if(file) handleImportFile(file);
+};
+
 /* ==================== Drive auth ==================== */
 function initDriveAuth(){
   if(typeof google === 'undefined' || !google.accounts){ setTimeout(initDriveAuth, 300); return; }
@@ -635,6 +713,7 @@ function applyEditorUI(){
   document.getElementById('btn-signin').textContent = isEditor ? (editorName || 'Signed in ✓') : 'Sign in';
   document.getElementById('btn-signin').classList.toggle('owner', isEditor);
   document.getElementById('btn-add').style.display = isEditor ? 'inline-flex' : 'none';
+  document.getElementById('btn-import').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-pantry').style.display = isEditor ? 'inline-flex' : 'none';
   document.getElementById('btn-signout').style.display = isEditor ? 'inline-flex' : 'none';
 }
