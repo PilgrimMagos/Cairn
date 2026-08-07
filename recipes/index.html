@@ -259,7 +259,7 @@
   .ingredient-row-line2{display:flex; align-items:center; gap:8px; flex-wrap:wrap; font-size:12.5px;}
   .ingredient-row select, .ingredient-row input{
     background:var(--bg-soft); border:1px solid var(--line-on-dark); border-radius:8px;
-    padding:7px 8px; color:var(--cream); font-family:var(--font-body); font-size:13.5px; width:100%;
+    padding:7px 8px; color:var(--cream); font-family:var(--font-body); font-size:13.5px; width:100%; min-width:0;
   }
   .ingredient-row .match-select{flex:1; min-width:140px; width:auto;}
   .ingredient-row .row-remove{
@@ -271,20 +271,21 @@
     text-decoration:underline; padding:0;
   }
   .mini-pantry-form{
-    display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:6px; margin-top:8px; padding-top:8px;
+    display:grid; grid-template-columns:1fr 1fr 1fr 1fr 1fr; gap:6px; margin-top:8px; padding-top:8px;
     border-top:1px dashed var(--line-on-dark);
   }
   .mini-pantry-form input, .mini-pantry-form select{font-size:12.5px; padding:6px 7px;}
   .totals-line{font-family:var(--font-mono); font-size:12.5px; color:var(--mustard-soft); margin:6px 0 16px;}
-  .pantry-item-row{
-    display:grid; grid-template-columns:1.3fr 1.1fr 66px 84px 84px 84px 26px; gap:6px;
-    align-items:center; margin-bottom:8px;
+  .pantry-row{border:1px solid var(--line-on-dark); border-radius:10px; padding:10px; margin-bottom:8px;}
+  .pantry-row-line1{display:grid; grid-template-columns:1fr 1fr 28px; gap:8px; margin-bottom:6px;}
+  .pantry-row-line2{display:grid; grid-template-columns:90px 1fr 1fr 1fr 1fr; gap:6px;}
+  .pantry-row input, .pantry-row select{
+    background:var(--bg-soft); border:1px solid var(--line-on-dark); border-radius:8px;
+    padding:6px 7px; color:var(--cream); font-family:var(--font-body); font-size:12.5px; width:100%; min-width:0;
   }
-  .pantry-item-row input, .pantry-item-row select{font-size:12.5px; padding:6px 7px;}
-  .pantry-header-row{
-    display:grid; grid-template-columns:1.3fr 1.1fr 66px 84px 84px 84px 26px; gap:6px;
-    font-family:var(--font-mono); font-size:10px; text-transform:uppercase; letter-spacing:.05em;
-    color:var(--cream-soft); margin-bottom:8px;
+  .pantry-row-line2 label{
+    display:block; font-family:var(--font-mono); font-size:9px; text-transform:uppercase; color:var(--cream-soft);
+    margin-bottom:2px; letter-spacing:.04em;
   }
 
   @media (max-width:520px){
@@ -292,9 +293,7 @@
     header{padding:14px 16px;}
     .toolbar, .list-wrap{padding-left:14px; padding-right:14px;}
     .ingredient-row-line1{grid-template-columns:56px 74px 1fr 26px;}
-    .pantry-item-row, .pantry-header-row{grid-template-columns:1fr; gap:4px;}
-    .pantry-header-row{display:none;}
-    .pantry-item-row{border:1px solid var(--line-on-dark); border-radius:8px; padding:8px; margin-bottom:10px;}
+    .pantry-row-line2{grid-template-columns:1fr 1fr;}
   }
 </style>
 </head>
@@ -366,15 +365,17 @@
     </div>
     <div class="panel-body" id="pantry-body">
       <p class="field-hint" style="margin-bottom:16px;">
-        Prices and calories here get matched automatically against ingredients as you add them to recipes.
-        Cost/kcal are <em>per unit</em> (per gram, per ml, or per each) — a density is only needed if a recipe
-        might give this ingredient in the "other" measurement type (e.g. priced per ml, but a recipe calls for grams).
+        Cost, calories, and protein here get matched automatically against ingredients as you add them to recipes —
+        all <em>per unit</em> (per gram, per ml, or per each). A density is only needed if a recipe might give this
+        ingredient in the "other" measurement type (e.g. priced per ml, but a recipe calls for grams). Cost is left
+        at 0 by default — fill in your own, since prices vary by store and change over time; kcal/protein for the
+        starter list below are standard raw/as-purchased values.
       </p>
-      <div class="pantry-header-row">
-        <span>Name</span><span>Aliases</span><span>Unit</span><span>Cost/unit</span><span>Kcal/unit</span><span>Density (g/ml)</span><span></span>
+      <div style="display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px;">
+        <button class="btn small" id="btn-pantry-add-row" type="button">+ Add pantry item</button>
+        <button class="btn small" id="btn-pantry-load-common" type="button">Load common ingredients</button>
       </div>
       <div id="pantry-list"></div>
-      <button class="btn small" id="btn-pantry-add-row" type="button">+ Add pantry item</button>
     </div>
     <div class="panel-footer">
       <span class="save-hint" id="pantry-save-hint"></span>
@@ -526,9 +527,9 @@ function toGrams(qty, unit){ return WEIGHT_TO_G[unit] != null ? qty*WEIGHT_TO_G[
 function toMl(qty, unit){ return VOLUME_TO_ML[unit] != null ? qty*VOLUME_TO_ML[unit] : null; }
 
 function computeCostAndKcal(row, pantryItem){
-  if(!pantryItem) return { cost:null, kcal:null };
+  if(!pantryItem) return { cost:null, kcal:null, protein:null };
   const qty = parseQuantityString(row.quantity);
-  if(qty == null) return { cost:null, kcal:null };
+  if(qty == null) return { cost:null, kcal:null, protein:null };
   const unit = row.unit;
   let amount = null;
   if(pantryItem.unit === 'each'){
@@ -542,16 +543,17 @@ function computeCostAndKcal(row, pantryItem){
     if(ml != null) amount = ml;
     else { const g = toGrams(qty, unit); if(g != null && pantryItem.density) amount = g / pantryItem.density; }
   }
-  if(amount == null) return { cost:null, kcal:null };
+  if(amount == null) return { cost:null, kcal:null, protein:null };
   const cost = pantryItem.costPerUnit != null ? amount * pantryItem.costPerUnit : null;
   const kcal = pantryItem.kcalPerUnit != null ? amount * pantryItem.kcalPerUnit : null;
-  return { cost, kcal };
+  const protein = pantryItem.proteinPerUnit != null ? amount * pantryItem.proteinPerUnit : null;
+  return { cost, kcal, protein };
 }
 
 function recomputeIngredientRow(row){
   const item = pantry.find(p=>p.id === row.pantryId) || null;
-  const { cost, kcal } = computeCostAndKcal(row, item);
-  row.cost = cost; row.kcal = kcal;
+  const { cost, kcal, protein } = computeCostAndKcal(row, item);
+  row.cost = cost; row.kcal = kcal; row.protein = protein;
   return row;
 }
 
@@ -1164,12 +1166,21 @@ function formatIngredientLine(row){
 }
 
 function ingredientTotals(ingredients){
-  let cost = 0, kcal = 0, priced = 0;
+  let cost = 0, kcal = 0, protein = 0, priced = 0;
   (ingredients||[]).forEach(row=>{
     if(row.cost != null){ cost += row.cost; priced++; }
     if(row.kcal != null){ kcal += row.kcal; }
+    if(row.protein != null){ protein += row.protein; }
   });
-  return { cost, kcal, priced, total: (ingredients||[]).length };
+  return { cost, kcal, protein, priced, total: (ingredients||[]).length };
+}
+
+function totalsLineText(totals){
+  if(!totals.priced) return '';
+  const parts = [`~$${totals.cost.toFixed(2)}`];
+  if(totals.kcal) parts.push(Math.round(totals.kcal) + ' kcal');
+  if(totals.protein) parts.push(Math.round(totals.protein) + 'g protein');
+  return `${parts.join(' · ')} (${totals.priced} of ${totals.total} priced)`;
 }
 
 function renderReadOnly(d){
@@ -1185,7 +1196,7 @@ function renderReadOnly(d){
     </div>
     ${(d.tags && d.tags.length) ? `<div class="detail-tags">${d.tags.map(t=>`<span class="pill">${escapeHtml(t)}</span>`).join('')}</div>`:''}
     ${(d.ingredients && d.ingredients.length) ? `<div class="detail-section"><h3>Ingredients</h3><ul>${d.ingredients.map(row=>`<li>${escapeHtml(formatIngredientLine(row))}</li>`).join('')}</ul>
-      ${totals.priced > 0 ? `<div class="totals-line">~$${totals.cost.toFixed(2)}${totals.kcal ? ' · ' + Math.round(totals.kcal) + ' kcal' : ''} (${totals.priced} of ${totals.total} priced)</div>` : ''}
+      ${totals.priced > 0 ? `<div class="totals-line">${totalsLineText(totals)}</div>` : ''}
     </div>`:''}
     ${(d.instructions && d.instructions.length) ? `<div class="detail-section"><h3>Instructions</h3><ol>${d.instructions.map(i=>`<li>${escapeHtml(i)}</li>`).join('')}</ol></div>`:''}
     ${d.notes ? `<div class="detail-section"><h3>Notes</h3><p>${escapeHtml(d.notes)}</p></div>`:''}
@@ -1303,7 +1314,7 @@ function renderIngredientRows(d){
     const badgeText = row.status === 'confirmed' ? 'confirmed'
       : row.status === 'auto' ? `match ${Math.round((row.matchScore||0)*100)}%`
       : 'no match';
-    const costText = row.cost != null ? `$${row.cost.toFixed(2)}${row.kcal!=null ? ' · ' + Math.round(row.kcal) + ' kcal' : ''}` : '';
+    const costText = rowCostText(row);
     return `
       <div class="ingredient-row" data-idx="${idx}">
         <div class="ingredient-row-line1">
@@ -1350,6 +1361,14 @@ function renderIngredientRows(d){
   updateIngredientTotals(d);
 }
 
+function rowCostText(row){
+  if(row.cost == null) return '';
+  const parts = [`$${row.cost.toFixed(2)}`];
+  if(row.kcal != null) parts.push(Math.round(row.kcal) + ' kcal');
+  if(row.protein != null) parts.push(Math.round(row.protein) + 'g protein');
+  return parts.join(' · ');
+}
+
 function updateRowDisplay(rowEl, row){
   const badgeClass = row.status === 'confirmed' ? 'confirmed' : (row.status === 'auto' ? 'auto' : 'unmatched');
   const badgeText = row.status === 'confirmed' ? 'confirmed'
@@ -1358,15 +1377,14 @@ function updateRowDisplay(rowEl, row){
   const badge = rowEl.querySelector('.badge');
   badge.className = `badge ${badgeClass}`;
   badge.textContent = badgeText;
-  rowEl.querySelector('.ingredient-cost').textContent = row.cost != null
-    ? `$${row.cost.toFixed(2)}${row.kcal!=null ? ' · ' + Math.round(row.kcal) + ' kcal' : ''}` : '';
+  rowEl.querySelector('.ingredient-cost').textContent = rowCostText(row);
 }
 
 function updateIngredientTotals(d){
   const el = document.getElementById('ingredient-totals');
   if(!el) return;
   const t = ingredientTotals(d.ingredients);
-  el.textContent = t.total ? `~$${t.cost.toFixed(2)}${t.kcal ? ' · ' + Math.round(t.kcal) + ' kcal' : ''} (${t.priced} of ${t.total} priced)` : '';
+  el.textContent = totalsLineText(t);
 }
 
 function openMiniPantryForm(rowEl, row, d){
@@ -1382,6 +1400,7 @@ function openMiniPantryForm(rowEl, row, d){
       </select>
       <input type="text" class="mp-cost" placeholder="cost/unit">
       <input type="text" class="mp-kcal" placeholder="kcal/unit">
+      <input type="text" class="mp-protein" placeholder="protein g/unit">
     </div>
     <button type="button" class="btn small" style="margin-top:6px;" id="btn-mp-save-${row.id}">Save to pantry</button>
   `;
@@ -1390,8 +1409,9 @@ function openMiniPantryForm(rowEl, row, d){
     const unit = slot.querySelector('.mp-unit').value;
     const costPerUnit = parseFloat(slot.querySelector('.mp-cost').value) || 0;
     const kcalPerUnit = parseFloat(slot.querySelector('.mp-kcal').value) || 0;
+    const proteinPerUnit = parseFloat(slot.querySelector('.mp-protein').value) || 0;
     if(!name){ alert('Give the pantry item a name.'); return; }
-    const item = { id: genId(), name, aliases: [], unit, costPerUnit, kcalPerUnit, density: null };
+    const item = { id: genId(), name, aliases: [], unit, costPerUnit, kcalPerUnit, proteinPerUnit, density: null };
     pantry.push(item);
     try{
       await savePantry();
@@ -1490,6 +1510,73 @@ document.getElementById('btn-delete').onclick = async ()=>{
   }
 };
 
+// Kcal/protein are stable nutritional facts for raw/as-purchased ingredients,
+// so they're safe to prefill. Cost is left at 0 — it varies by store, region,
+// and time, so there's no honest way to bake it in; the person fills that in themselves.
+const STARTER_PANTRY = [
+  { name:'Pasta', aliases:['spaghetti','penne','farfalle','fusilli'], unit:'g', kcalPerUnit:3.71, proteinPerUnit:0.13, density:null },
+  { name:'White rice', aliases:['rice'], unit:'g', kcalPerUnit:3.65, proteinPerUnit:0.071, density:null },
+  { name:'Potato', aliases:['potatoes'], unit:'g', kcalPerUnit:0.77, proteinPerUnit:0.02, density:null },
+  { name:'Sweet potato', aliases:['sweet potatoes'], unit:'g', kcalPerUnit:0.86, proteinPerUnit:0.016, density:null },
+  { name:'All-purpose flour', aliases:['plain flour','flour'], unit:'g', kcalPerUnit:3.64, proteinPerUnit:0.10, density:0.53 },
+  { name:'Bread', aliases:['white bread','loaf'], unit:'g', kcalPerUnit:2.65, proteinPerUnit:0.09, density:null },
+  { name:'Rolled oats', aliases:['oats','porridge oats'], unit:'g', kcalPerUnit:3.89, proteinPerUnit:0.169, density:0.34 },
+  { name:'Quinoa', aliases:[], unit:'g', kcalPerUnit:3.68, proteinPerUnit:0.141, density:null },
+  { name:'Couscous', aliases:[], unit:'g', kcalPerUnit:3.76, proteinPerUnit:0.128, density:null },
+  { name:'Chicken breast', aliases:['chicken breasts','skinless chicken breast'], unit:'g', kcalPerUnit:1.20, proteinPerUnit:0.225, density:null },
+  { name:'Chicken thigh', aliases:['chicken thighs'], unit:'g', kcalPerUnit:1.43, proteinPerUnit:0.179, density:null },
+  { name:'Beef mince', aliases:['ground beef','minced beef'], unit:'g', kcalPerUnit:2.54, proteinPerUnit:0.17, density:null },
+  { name:'Beef steak', aliases:['sirloin steak','beef sirloin'], unit:'g', kcalPerUnit:1.83, proteinPerUnit:0.21, density:null },
+  { name:'Pork loin', aliases:['pork chop','pork'], unit:'g', kcalPerUnit:1.43, proteinPerUnit:0.21, density:null },
+  { name:'Bacon', aliases:['streaky bacon'], unit:'g', kcalPerUnit:5.41, proteinPerUnit:0.12, density:null },
+  { name:'Salmon', aliases:['salmon fillet'], unit:'g', kcalPerUnit:2.08, proteinPerUnit:0.20, density:null },
+  { name:'Cod', aliases:['cod fillet','white fish'], unit:'g', kcalPerUnit:0.82, proteinPerUnit:0.18, density:null },
+  { name:'Prawns', aliases:['shrimp'], unit:'g', kcalPerUnit:0.85, proteinPerUnit:0.20, density:null },
+  { name:'Tuna (canned, in water)', aliases:['canned tuna','tuna'], unit:'g', kcalPerUnit:1.16, proteinPerUnit:0.26, density:null },
+  { name:'Egg', aliases:['eggs','large egg'], unit:'each', kcalPerUnit:70, proteinPerUnit:6, density:null },
+  { name:'Tofu', aliases:['firm tofu'], unit:'g', kcalPerUnit:1.44, proteinPerUnit:0.15, density:null },
+  { name:'Italian sausage', aliases:['sausage','sausages'], unit:'g', kcalPerUnit:3.00, proteinPerUnit:0.13, density:null },
+  { name:'Milk', aliases:['whole milk'], unit:'ml', kcalPerUnit:0.61, proteinPerUnit:0.032, density:null },
+  { name:'Semi-skimmed milk', aliases:['skimmed milk','2% milk'], unit:'ml', kcalPerUnit:0.46, proteinPerUnit:0.034, density:null },
+  { name:'Butter', aliases:[], unit:'g', kcalPerUnit:7.17, proteinPerUnit:0.009, density:0.96 },
+  { name:'Cheddar cheese', aliases:['cheddar'], unit:'g', kcalPerUnit:4.02, proteinPerUnit:0.25, density:null },
+  { name:'Parmesan', aliases:['parmesan cheese','grated parmesan'], unit:'g', kcalPerUnit:4.31, proteinPerUnit:0.38, density:null },
+  { name:'Greek yogurt', aliases:['yogurt'], unit:'g', kcalPerUnit:0.59, proteinPerUnit:0.10, density:null },
+  { name:'Heavy cream', aliases:['double cream','whipping cream'], unit:'ml', kcalPerUnit:3.40, proteinPerUnit:0.021, density:1.0 },
+  { name:'Cream cheese', aliases:[], unit:'g', kcalPerUnit:3.42, proteinPerUnit:0.06, density:null },
+  { name:'Mozzarella', aliases:[], unit:'g', kcalPerUnit:2.80, proteinPerUnit:0.22, density:null },
+  { name:'Onion', aliases:['onions'], unit:'each', kcalPerUnit:60, proteinPerUnit:1.65, density:null },
+  { name:'Garlic', aliases:['garlic clove','cloves garlic'], unit:'each', kcalPerUnit:4.5, proteinPerUnit:0.19, density:null },
+  { name:'Tomato', aliases:['tomatoes'], unit:'g', kcalPerUnit:0.18, proteinPerUnit:0.009, density:null },
+  { name:'Carrot', aliases:['carrots'], unit:'g', kcalPerUnit:0.41, proteinPerUnit:0.009, density:null },
+  { name:'Bell pepper', aliases:['pepper','capsicum'], unit:'g', kcalPerUnit:0.31, proteinPerUnit:0.01, density:null },
+  { name:'Broccoli', aliases:[], unit:'g', kcalPerUnit:0.34, proteinPerUnit:0.028, density:null },
+  { name:'Spinach', aliases:['baby spinach'], unit:'g', kcalPerUnit:0.23, proteinPerUnit:0.029, density:null },
+  { name:'Mushroom', aliases:['mushrooms','button mushroom'], unit:'g', kcalPerUnit:0.22, proteinPerUnit:0.031, density:null },
+  { name:'Courgette', aliases:['zucchini'], unit:'g', kcalPerUnit:0.17, proteinPerUnit:0.012, density:null },
+  { name:'Cucumber', aliases:[], unit:'g', kcalPerUnit:0.15, proteinPerUnit:0.007, density:null },
+  { name:'Lettuce', aliases:[], unit:'g', kcalPerUnit:0.15, proteinPerUnit:0.014, density:null },
+  { name:'Sweetcorn', aliases:['corn'], unit:'g', kcalPerUnit:0.86, proteinPerUnit:0.033, density:null },
+  { name:'Peas', aliases:['frozen peas'], unit:'g', kcalPerUnit:0.81, proteinPerUnit:0.054, density:null },
+  { name:'Cabbage', aliases:[], unit:'g', kcalPerUnit:0.25, proteinPerUnit:0.013, density:null },
+  { name:'Chickpeas', aliases:['canned chickpeas'], unit:'g', kcalPerUnit:1.39, proteinPerUnit:0.073, density:null },
+  { name:'Black beans', aliases:[], unit:'g', kcalPerUnit:1.32, proteinPerUnit:0.089, density:null },
+  { name:'Kidney beans', aliases:[], unit:'g', kcalPerUnit:1.27, proteinPerUnit:0.087, density:null },
+  { name:'Lentils', aliases:['red lentils','dried lentils'], unit:'g', kcalPerUnit:3.53, proteinPerUnit:0.25, density:null },
+  { name:'Olive oil', aliases:[], unit:'ml', kcalPerUnit:8.84, proteinPerUnit:0, density:0.92 },
+  { name:'Vegetable oil', aliases:[], unit:'ml', kcalPerUnit:8.84, proteinPerUnit:0, density:0.92 },
+  { name:'Mayonnaise', aliases:[], unit:'g', kcalPerUnit:6.80, proteinPerUnit:0.01, density:null },
+  { name:'Soy sauce', aliases:[], unit:'ml', kcalPerUnit:0.53, proteinPerUnit:0.08, density:null },
+  { name:'Honey', aliases:[], unit:'g', kcalPerUnit:3.04, proteinPerUnit:0.003, density:1.42 },
+  { name:'Sugar', aliases:['white sugar','granulated sugar'], unit:'g', kcalPerUnit:3.87, proteinPerUnit:0, density:0.85 },
+  { name:'Brown sugar', aliases:[], unit:'g', kcalPerUnit:3.80, proteinPerUnit:0, density:0.9 },
+  { name:'Almonds', aliases:[], unit:'g', kcalPerUnit:5.79, proteinPerUnit:0.21, density:null },
+  { name:'Peanut butter', aliases:[], unit:'g', kcalPerUnit:5.88, proteinPerUnit:0.25, density:null },
+  { name:'Lemon', aliases:[], unit:'each', kcalPerUnit:17, proteinPerUnit:0.6, density:null },
+  { name:'Lime', aliases:[], unit:'each', kcalPerUnit:13, proteinPerUnit:0.3, density:null },
+  { name:'Tortilla wrap', aliases:['tortilla','wrap'], unit:'each', kcalPerUnit:140, proteinPerUnit:4, density:null },
+];
+
 /* ==================== Pantry panel ==================== */
 document.getElementById('btn-pantry').onclick = async ()=>{
   await loadPantry();
@@ -1506,22 +1593,27 @@ document.getElementById('pantry-overlay').addEventListener('click', (e)=>{
 function renderPantryList(){
   const list = document.getElementById('pantry-list');
   list.innerHTML = pantry.map((p, idx)=> `
-    <div class="pantry-item-row" data-idx="${idx}">
-      <input type="text" class="p-name" value="${escapeHtml(p.name)}" placeholder="Name">
-      <input type="text" class="p-aliases" value="${escapeHtml((p.aliases||[]).join(', '))}" placeholder="aliases, comma sep">
-      <select class="p-unit">
-        <option value="g" ${p.unit==='g'?'selected':''}>per g</option>
-        <option value="ml" ${p.unit==='ml'?'selected':''}>per ml</option>
-        <option value="each" ${p.unit==='each'?'selected':''}>per each</option>
-      </select>
-      <input type="text" class="p-cost" value="${p.costPerUnit!=null?p.costPerUnit:''}" placeholder="cost">
-      <input type="text" class="p-kcal" value="${p.kcalPerUnit!=null?p.kcalPerUnit:''}" placeholder="kcal">
-      <input type="text" class="p-density" value="${p.density!=null?p.density:''}" placeholder="g/ml">
-      <button type="button" class="row-remove" title="Delete">&times;</button>
+    <div class="pantry-row" data-idx="${idx}">
+      <div class="pantry-row-line1">
+        <input type="text" class="p-name" value="${escapeHtml(p.name)}" placeholder="Name">
+        <input type="text" class="p-aliases" value="${escapeHtml((p.aliases||[]).join(', '))}" placeholder="aliases, comma separated">
+        <button type="button" class="row-remove" title="Delete">&times;</button>
+      </div>
+      <div class="pantry-row-line2">
+        <div><label>Unit</label><select class="p-unit">
+          <option value="g" ${p.unit==='g'?'selected':''}>per g</option>
+          <option value="ml" ${p.unit==='ml'?'selected':''}>per ml</option>
+          <option value="each" ${p.unit==='each'?'selected':''}>per each</option>
+        </select></div>
+        <div><label>Cost/unit</label><input type="text" class="p-cost" value="${p.costPerUnit!=null?p.costPerUnit:''}" placeholder="0"></div>
+        <div><label>Kcal/unit</label><input type="text" class="p-kcal" value="${p.kcalPerUnit!=null?p.kcalPerUnit:''}" placeholder="0"></div>
+        <div><label>Protein g/unit</label><input type="text" class="p-protein" value="${p.proteinPerUnit!=null?p.proteinPerUnit:''}" placeholder="0"></div>
+        <div><label>Density g/ml</label><input type="text" class="p-density" value="${p.density!=null?p.density:''}" placeholder="optional"></div>
+      </div>
     </div>
   `).join('');
 
-  list.querySelectorAll('.pantry-item-row').forEach(rowEl=>{
+  list.querySelectorAll('.pantry-row').forEach(rowEl=>{
     const idx = parseInt(rowEl.dataset.idx, 10);
     const item = pantry[idx];
     rowEl.querySelector('.p-name').oninput = e=> item.name = e.target.value;
@@ -1529,6 +1621,7 @@ function renderPantryList(){
     rowEl.querySelector('.p-unit').onchange = e=> item.unit = e.target.value;
     rowEl.querySelector('.p-cost').oninput = e=> item.costPerUnit = parseFloat(e.target.value) || 0;
     rowEl.querySelector('.p-kcal').oninput = e=> item.kcalPerUnit = parseFloat(e.target.value) || 0;
+    rowEl.querySelector('.p-protein').oninput = e=> item.proteinPerUnit = parseFloat(e.target.value) || 0;
     rowEl.querySelector('.p-density').oninput = e=> item.density = e.target.value ? parseFloat(e.target.value) : null;
     rowEl.querySelector('.row-remove').onclick = ()=>{
       if(!confirm(`Remove "${item.name}" from the pantry? Recipes already matched to it will just show as unmatched.`)) return;
@@ -1539,8 +1632,21 @@ function renderPantryList(){
 }
 
 document.getElementById('btn-pantry-add-row').onclick = ()=>{
-  pantry.push({ id:genId(), name:'', aliases:[], unit:'g', costPerUnit:0, kcalPerUnit:0, density:null });
+  pantry.push({ id:genId(), name:'', aliases:[], unit:'g', costPerUnit:0, kcalPerUnit:0, proteinPerUnit:0, density:null });
   renderPantryList();
+};
+
+document.getElementById('btn-pantry-load-common').onclick = ()=>{
+  const existingNames = new Set(pantry.map(p=>p.name.trim().toLowerCase()));
+  let added = 0;
+  STARTER_PANTRY.forEach(item=>{
+    if(existingNames.has(item.name.toLowerCase())) return; // skip duplicates already in the pantry
+    pantry.push({ id:genId(), name:item.name, aliases:item.aliases.slice(), unit:item.unit,
+      costPerUnit:0, kcalPerUnit:item.kcalPerUnit, proteinPerUnit:item.proteinPerUnit, density:item.density });
+    added++;
+  });
+  renderPantryList();
+  showToast(added ? `Added ${added} ingredients — review, then Save pantry` : 'Already have all of these');
 };
 
 document.getElementById('btn-pantry-save').onclick = async ()=>{
