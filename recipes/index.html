@@ -261,6 +261,7 @@
   </div>
   <div class="header-actions">
     <button class="btn editor-only" id="btn-add" style="display:none;">+ New recipe</button>
+    <button class="btn small" id="btn-refresh-app" title="Clear cache and reload the latest version">Refresh app</button>
     <button class="btn" id="btn-signin">Sign in</button>
     <button class="btn small editor-only" id="btn-signout" style="display:none;">Sign out</button>
   </div>
@@ -1009,6 +1010,22 @@ if('serviceWorker' in navigator){
     navigator.serviceWorker.register('sw.js').catch(()=>{});
   });
 }
+
+document.getElementById('btn-refresh-app').onclick = async ()=>{
+  const btn = document.getElementById('btn-refresh-app');
+  btn.textContent = 'Refreshing…';
+  try{
+    if('caches' in window){
+      const names = await caches.keys();
+      await Promise.all(names.map(n=>caches.delete(n)));
+    }
+    if('serviceWorker' in navigator){
+      const regs = await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(r=>r.unregister()));
+    }
+  }catch(e){}
+  location.reload();
+};
 
 /* ==================== Init ==================== */
 (async function init(){
